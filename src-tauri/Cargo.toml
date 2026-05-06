@@ -1,0 +1,56 @@
+[package]
+name = "ffeel"
+version = "0.1.0"
+description = "ffeel - 局域网文件共享"
+authors = ["ffeel"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "devtools", "tray-icon"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["ws", "multipart", "macros"] }
+tower-http = { version = "0.5", features = ["cors"] }
+mdns-sd = "0.12"
+uuid = { version = "1", features = ["v4"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+reqwest = { version = "0.12", features = ["json", "multipart", "stream", "rustls-tls"], default-features = false }
+futures-util = "0.3"
+rand = "0.8"
+urlencoding = "2"
+local-ip-address = "0.6"
+mime_guess = "2"
+dirs = "5"
+open = "5"
+hostname = "0.4"
+tokio-util = { version = "0.7", features = ["io", "io-util"] }
+bytes = "1"
+axum-extra = { version = "0.9", features = ["typed-header"] }
+rcgen = "0.13"
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+tower = { version = "0.5", features = ["util"] }
+rustls = { version = "0.23", features = ["ring"] }
+rustls-pemfile = "2"
+tokio-rustls = "0.26"
+base64 = "0.22"
+
+[dev-dependencies]
+tempfile = "3"

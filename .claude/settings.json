@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && if echo \"$FILE\" | grep -qE '(\\.env|\\.lock|secrets\\.yaml|credentials)'; then echo \"BLOCKED: Cannot modify protected file: $FILE\" >&2; exit 2; fi",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qE '^git\\s+commit'; then \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre-commit.sh\" || exit 2; fi",
+            "timeout": 300000
+          },
+          {
+            "type": "command",
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qEi '(rm\\s+-rf\\s+/\\s*$|rm\\s+-rf\\s+/\\*|sudo\\s+rm\\s+-rf|DROP\\s+TABLE|DROP\\s+DATABASE)'; then echo \"BLOCKED: Dangerous command detected\" >&2; exit 2; fi"
+          },
+          {
+            "type": "command",
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qE '^(ls|head|tail|wc|grep|rg|mdls|git\\s+(status|log|diff|show)|pwd|which)\\b'; then echo '{\"permissionDecision\": \"allow\"}'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && [ -n \"$FILE\" ] && { [ -f \"${CLAUDE_PROJECT_DIR:-.}/package.json\" ] && npx prettier --write \"$FILE\" 2>/dev/null || true; }"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qE '(npm\\s+run\\s+tauri\\s+build|^tauri\\s+build)'; then \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/post-build.sh\"; fi",
+            "timeout": 30000
+          },
+          {
+            "type": "command",
+            "command": "cat | jq -r '\"[\" + (now | strftime(\"%Y-%m-%d %H:%M:%S\")) + \"] \" + .tool_input.command' >> \"${CLAUDE_PROJECT_DIR:-.}/.claude/command_log.txt\" && tail -n 5000 \"${CLAUDE_PROJECT_DIR:-.}/.claude/command_log.txt\" > \"${CLAUDE_PROJECT_DIR:-.}/.claude/command_log.tmp\" && mv \"${CLAUDE_PROJECT_DIR:-.}/.claude/command_log.tmp\" \"${CLAUDE_PROJECT_DIR:-.}/.claude/command_log.txt\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude needs your attention\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PROJECT_DIR}/.claude/compaction-context.md\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
