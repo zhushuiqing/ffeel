@@ -24,12 +24,12 @@ jobs:
           node-version: "20"
 
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install dependencies
-        run: |
-          npm install
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+        run: npm install
 
       - name: Build macOS (Universal)
         run: |
@@ -55,7 +55,7 @@ jobs:
           node-version: "20"
 
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: npm install
