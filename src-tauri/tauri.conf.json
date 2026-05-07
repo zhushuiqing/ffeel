@@ -51,7 +51,7 @@
     ],
     "windows": {
       "webviewInstallMode": {
-        "type": "embedInstaller"
+        "type": "offlineInstaller"
       },
       "wix": {
         "language": "zh-CN"
