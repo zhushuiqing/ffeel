@@ -167,6 +167,7 @@ mod tests {
     }
 
     #[derive(Deserialize)]
+    #[allow(dead_code)]
     struct TestUploadQuery {
         path: Option<String>,
         name: Option<String>,

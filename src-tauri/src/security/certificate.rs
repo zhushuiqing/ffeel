@@ -94,7 +94,7 @@ mod tests {
             .expect("应能解析密钥 PEM")
             .expect("应包含私钥");
 
-        let mut config = rustls::ServerConfig::builder()
+        let config = rustls::ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(certs, keys)
             .expect("应能用证书和密钥创建 TLS 配置");
