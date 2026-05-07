@@ -1,1966 +1,3081 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ffeel 文件共享</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>ffeel 文件共享</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-:root {
-  --accent: #007AFF;
-  --accent-hover: #0066D6;
-  --red: #FF3B30;
-  --green: #34C759;
-  --orange: #FF9500;
-  --text-primary: #1d1d1f;
-  --text-secondary: #86868b;
-  --text-tertiary: #aeaeb2;
-  --bg-app: rgba(245, 245, 247, 0.72);
-  --bg-header: rgba(255, 255, 255, 0.56);
-  --bg-tabs: rgba(255, 255, 255, 0.48);
-  --bg-card: rgba(255, 255, 255, 0.82);
-  --bg-hover: rgba(0, 0, 0, 0.04);
-  --bg-active: rgba(0, 122, 255, 0.08);
-  --bg-selected: rgba(0, 122, 255, 0.12);
-  --separator: rgba(60, 60, 67, 0.08);
-  --separator-heavy: rgba(60, 60, 67, 0.18);
-  --blur: 40px;
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-}
+      :root {
+        --accent: #007aff;
+        --accent-hover: #0066d6;
+        --red: #ff3b30;
+        --green: #34c759;
+        --orange: #ff9500;
+        --text-primary: #1d1d1f;
+        --text-secondary: #86868b;
+        --text-tertiary: #aeaeb2;
+        --bg-app: rgba(245, 245, 247, 0.72);
+        --bg-header: rgba(255, 255, 255, 0.56);
+        --bg-tabs: rgba(255, 255, 255, 0.48);
+        --bg-card: rgba(255, 255, 255, 0.82);
+        --bg-hover: rgba(0, 0, 0, 0.04);
+        --bg-active: rgba(0, 122, 255, 0.08);
+        --bg-selected: rgba(0, 122, 255, 0.12);
+        --separator: rgba(60, 60, 67, 0.08);
+        --separator-heavy: rgba(60, 60, 67, 0.18);
+        --blur: 40px;
+        --radius-sm: 6px;
+        --radius: 8px;
+        --radius-lg: 12px;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow-elevated:
+          0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+      }
 
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
-  background:var(--bg-app);
-  color:var(--text-primary);
-  font-size:13px;
-  line-height:1.4;
-  -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-}
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+          sans-serif;
+        background: var(--bg-app);
+        color: var(--text-primary);
+        font-size: 13px;
+        line-height: 1.4;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
 
-/* ===== Header ===== */
-header{
-  background:var(--bg-header);
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-  border-bottom:1px solid var(--separator);
-  padding:10px 20px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  position:sticky;
-  top:0;
-  z-index:10;
-  -webkit-app-region:drag;
-}
-header h1{font-size:15px;font-weight:600;letter-spacing:-.02em}
-header .device-info{font-size:12px;color:var(--text-secondary)}
+      /* ===== Header ===== */
+      header {
+        background: var(--bg-header);
+        -webkit-backdrop-filter: blur(var(--blur));
+        backdrop-filter: blur(var(--blur));
+        border-bottom: 1px solid var(--separator);
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        -webkit-app-region: drag;
+      }
+      header h1 {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      header .device-info {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
 
-/* ===== App Layout ===== */
-.app-layout{
-  display:flex;
-  height:calc(100vh - 44px);
-  overflow:hidden;
-}
+      /* ===== App Layout ===== */
+      .app-layout {
+        display: flex;
+        height: calc(100vh - 44px);
+        overflow: hidden;
+      }
 
-/* ===== Sidebar ===== */
-.app-sidebar{
-  width:220px;
-  min-width:220px;
-  background:var(--bg-tabs);
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-  border-right:1px solid var(--separator);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.sidebar-nav{padding:8px 6px;flex-shrink:0}
-.sidebar-tab{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  width:100%;
-  padding:8px 10px;
-  border:none;
-  background:transparent;
-  color:var(--text-secondary);
-  cursor:pointer;
-  font-size:12px;
-  font-family:inherit;
-  border-radius:var(--radius-sm);
-  transition:all .15s;
-  font-weight:500;
-  text-align:left;
-}
-.sidebar-tab:hover{color:var(--text-primary);background:var(--bg-hover)}
-.sidebar-tab.active{color:var(--accent);background:var(--bg-active)}
+      /* ===== Sidebar ===== */
+      .app-sidebar {
+        width: 220px;
+        min-width: 220px;
+        background: var(--bg-tabs);
+        -webkit-backdrop-filter: blur(var(--blur));
+        backdrop-filter: blur(var(--blur));
+        border-right: 1px solid var(--separator);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .sidebar-nav {
+        padding: 8px 6px;
+        flex-shrink: 0;
+      }
+      .sidebar-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 10px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        border-radius: var(--radius-sm);
+        transition: all 0.15s;
+        font-weight: 500;
+        text-align: left;
+      }
+      .sidebar-tab:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+      }
+      .sidebar-tab.active {
+        color: var(--accent);
+        background: var(--bg-active);
+      }
 
-/* ===== Friends Layout ===== */
-.friends-layout{
-  display:flex;
-  height:100%;
-}
-.friends-sidebar-panel{
-  width:200px;
-  min-width:200px;
-  background:var(--bg-tabs);
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-  border-right:1px solid var(--separator);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.friends-panel-title{
-  font-size:12px;
-  font-weight:600;
-  padding:12px 14px 4px;
-  color:var(--text-primary);
-}
-.friends-panel-online{
-  font-size:10px;
-  color:var(--text-tertiary);
-  padding:0 14px 8px;
-}
-#friends-panel-list{
-  flex:1;
-  overflow-y:auto;
-  padding:4px 6px;
-}
-.friends-panel-item{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:7px 10px;
-  border-radius:var(--radius-sm);
-  cursor:pointer;
-  transition:all .15s;
-}
-.friends-panel-item:hover{background:var(--bg-hover)}
-.friends-panel-item.selected{background:var(--bg-selected)}
-.friends-panel-avatar{
-  width:28px;height:28px;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:11px;font-weight:600;
-  color:#fff;
-  flex-shrink:0;
-  user-select:none;
-}
-.friends-panel-info{flex:1;min-width:0}
-.friends-panel-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.friends-panel-status{font-size:10px;color:var(--text-tertiary)}
-.friends-panel-dot{
-  width:8px;height:8px;
-  border-radius:50%;
-  flex-shrink:0;
-}
-.friends-panel-dot.online{background:var(--green)}
-.friends-panel-dot.offline{background:var(--text-tertiary);opacity:.4}
+      /* ===== Friends Layout ===== */
+      .friends-layout {
+        display: flex;
+        height: 100%;
+      }
+      .friends-sidebar-panel {
+        width: 200px;
+        min-width: 200px;
+        background: var(--bg-tabs);
+        -webkit-backdrop-filter: blur(var(--blur));
+        backdrop-filter: blur(var(--blur));
+        border-right: 1px solid var(--separator);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .friends-panel-title {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 12px 14px 4px;
+        color: var(--text-primary);
+      }
+      .friends-panel-online {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        padding: 0 14px 8px;
+      }
+      #friends-panel-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 6px;
+      }
+      .friends-panel-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .friends-panel-item:hover {
+        background: var(--bg-hover);
+      }
+      .friends-panel-item.selected {
+        background: var(--bg-selected);
+      }
+      .friends-panel-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: #fff;
+        flex-shrink: 0;
+        user-select: none;
+      }
+      .friends-panel-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .friends-panel-name {
+        font-size: 12px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .friends-panel-status {
+        font-size: 10px;
+        color: var(--text-tertiary);
+      }
+      .friends-panel-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .friends-panel-dot.online {
+        background: var(--green);
+      }
+      .friends-panel-dot.offline {
+        background: var(--text-tertiary);
+        opacity: 0.4;
+      }
 
-.tab-content{display:none}
-.tab-content.active{display:block}
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
 
-/* ===== Content Area ===== */
-.app-content{
-  flex:1;
-  height:100%;
-  overflow-y:auto;
-  min-width:0;
-}
+      /* ===== Content Area ===== */
+      .app-content {
+        flex: 1;
+        height: 100%;
+        overflow-y: auto;
+        min-width: 0;
+      }
 
-/* ===== Container ===== */
-.container{max-width:960px;margin:0 auto;padding:12px 16px}
-.toolbar{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.toolbar button,.pair-btn,.settings-btn{
-  padding:4px 10px;
-  border:1px solid var(--separator-heavy);
-  border-radius:var(--radius-sm);
-  background:var(--bg-card);
-  color:var(--text-primary);
-  cursor:pointer;
-  font-size:12px;
-  font-family:inherit;
-  white-space:nowrap;
-  transition:all .15s;
-}
-.toolbar button:hover,.pair-btn:hover,.settings-btn:hover{background:var(--bg-hover);border-color:var(--accent)}
-.toolbar button.primary,.pair-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
-.toolbar button.primary:hover{background:var(--accent-hover)}
-.toolbar button.danger{color:var(--red);border-color:var(--red)}
-.breadcrumb{font-size:12px;color:var(--text-secondary);padding:5px 0;word-break:break-all}
-.breadcrumb a{color:var(--accent);cursor:pointer;text-decoration:none}
-.breadcrumb a:hover{text-decoration:underline}
-.search-bar{display:flex;gap:6px;margin-bottom:10px}
-.search-bar input{
-  flex:1;
-  padding:5px 8px;
-  border:1px solid var(--separator-heavy);
-  border-radius:var(--radius-sm);
-  font-size:12px;
-  font-family:inherit;
-  outline:none;
-  background:var(--bg-card);
-  color:var(--text-primary);
-  transition:border-color .15s;
-}
-.search-bar input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,122,255,.15)}
-.search-count{font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;white-space:nowrap}
+      /* ===== Container ===== */
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 12px 16px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .toolbar button,
+      .pair-btn,
+      .settings-btn {
+        padding: 4px 10px;
+        border: 1px solid var(--separator-heavy);
+        border-radius: var(--radius-sm);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        white-space: nowrap;
+        transition: all 0.15s;
+      }
+      .toolbar button:hover,
+      .pair-btn:hover,
+      .settings-btn:hover {
+        background: var(--bg-hover);
+        border-color: var(--accent);
+      }
+      .toolbar button.primary,
+      .pair-btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+      .toolbar button.primary:hover {
+        background: var(--accent-hover);
+      }
+      .toolbar button.danger {
+        color: var(--red);
+        border-color: var(--red);
+      }
+      .breadcrumb {
+        font-size: 12px;
+        color: var(--text-secondary);
+        padding: 5px 0;
+        word-break: break-all;
+      }
+      .breadcrumb a {
+        color: var(--accent);
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      .search-bar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .search-bar input {
+        flex: 1;
+        padding: 5px 8px;
+        border: 1px solid var(--separator-heavy);
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        font-family: inherit;
+        outline: none;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        transition: border-color 0.15s;
+      }
+      .search-bar input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+      }
+      .search-count {
+        font-size: 11px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
 
-/* ===== Table ===== */
-.table-wrap{background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--separator);overflow:hidden}
-table{width:100%;border-collapse:collapse}
-th{
-  padding:7px 12px;
-  text-align:left;
-  font-weight:500;
-  font-size:11px;
-  color:var(--text-secondary);
-  border-bottom:1px solid var(--separator-heavy);
-  white-space:nowrap;
-  text-transform:uppercase;
-  letter-spacing:.3px;
-  position:sticky;
-  top:0;
-  background:var(--bg-card);
-}
-th.col-name{width:auto}
-th.col-size{width:85px}
-th.col-time{width:140px}
-th.col-action{width:65px}
-td{padding:5px 8px;border-bottom:1px solid var(--separator);font-size:12px;color:var(--text-primary)}
-tr:hover{background:var(--bg-hover)}
-tr.dir{cursor:pointer}
-td.name{display:flex;align-items:center;gap:5px}
-td.name .icon{font-size:14px}
-td.name a{color:var(--text-primary);text-decoration:none;cursor:pointer}
-tr.dir td.name a{font-weight:500}
-td.name a:hover{color:var(--accent)}
-td.size,td.time{color:var(--text-secondary);font-size:11px;white-space:nowrap}
-.loading{text-align:center;padding:20px;color:var(--text-secondary)}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--separator-heavy);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:32px 16px;color:var(--text-secondary);font-size:13px}
-.batch-bar{background:var(--bg-active);border:1px solid rgba(0,122,255,.15);border-radius:var(--radius-sm);padding:6px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:12px}
-input[type="checkbox"]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent)}
+      /* ===== Table ===== */
+      .table-wrap {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        border: 1px solid var(--separator);
+        overflow: hidden;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        padding: 7px 12px;
+        text-align: left;
+        font-weight: 500;
+        font-size: 11px;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--separator-heavy);
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        position: sticky;
+        top: 0;
+        background: var(--bg-card);
+      }
+      th.col-name {
+        width: auto;
+      }
+      th.col-size {
+        width: 85px;
+      }
+      th.col-time {
+        width: 140px;
+      }
+      th.col-action {
+        width: 65px;
+      }
+      td {
+        padding: 5px 8px;
+        border-bottom: 1px solid var(--separator);
+        font-size: 12px;
+        color: var(--text-primary);
+      }
+      tr:hover {
+        background: var(--bg-hover);
+      }
+      tr.dir {
+        cursor: pointer;
+      }
+      td.name {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      td.name .icon {
+        font-size: 14px;
+      }
+      td.name a {
+        color: var(--text-primary);
+        text-decoration: none;
+        cursor: pointer;
+      }
+      tr.dir td.name a {
+        font-weight: 500;
+      }
+      td.name a:hover {
+        color: var(--accent);
+      }
+      td.size,
+      td.time {
+        color: var(--text-secondary);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: var(--text-secondary);
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--separator-heavy);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .empty {
+        text-align: center;
+        padding: 32px 16px;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+      .batch-bar {
+        background: var(--bg-active);
+        border: 1px solid rgba(0, 122, 255, 0.15);
+        border-radius: var(--radius-sm);
+        padding: 6px 12px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+      }
+      input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+        accent-color: var(--accent);
+      }
 
-/* ===== Pairing Modal ===== */
-.modal-overlay{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.35);
-  -webkit-backdrop-filter:blur(8px);
-  backdrop-filter:blur(8px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:100;
-}
-.modal{
-  background:var(--bg-card);
-  border-radius:var(--radius-lg);
-  padding:28px;
-  max-width:360px;
-  width:90%;
-  text-align:center;
-  box-shadow:var(--shadow-elevated);
-  border:1px solid var(--separator-heavy);
-}
-.modal h2{margin-bottom:6px;font-size:18px;font-weight:600;color:var(--text-primary)}
-.modal p{color:var(--text-secondary);font-size:12px;margin-bottom:16px}
-.modal input[type="text"]{
-  width:160px;
-  padding:10px;
-  border:2px solid var(--separator-heavy);
-  border-radius:var(--radius);
-  font-size:26px;
-  text-align:center;
-  letter-spacing:6px;
-  outline:none;
-  font-family:SF Mono,monospace;
-  background:var(--bg-app);
-  color:var(--text-primary);
-}
-.modal input[type="text"]:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,122,255,.15)}
-.modal .error{color:var(--red);font-size:12px;margin-top:10px}
-.modal .hint{color:var(--text-tertiary);font-size:11px;margin-top:6px}
+      /* ===== Pairing Modal ===== */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+        max-width: 360px;
+        width: 90%;
+        text-align: center;
+        box-shadow: var(--shadow-elevated);
+        border: 1px solid var(--separator-heavy);
+      }
+      .modal h2 {
+        margin-bottom: 6px;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .modal p {
+        color: var(--text-secondary);
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      .modal input[type="text"] {
+        width: 160px;
+        padding: 10px;
+        border: 2px solid var(--separator-heavy);
+        border-radius: var(--radius);
+        font-size: 26px;
+        text-align: center;
+        letter-spacing: 6px;
+        outline: none;
+        font-family:
+          SF Mono,
+          monospace;
+        background: var(--bg-app);
+        color: var(--text-primary);
+      }
+      .modal input[type="text"]:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+      }
+      .modal .error {
+        color: var(--red);
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      .modal .hint {
+        color: var(--text-tertiary);
+        font-size: 11px;
+        margin-top: 6px;
+      }
 
-/* ===== Status Bar ===== */
-.status-bar{background:var(--bg-active);border:1px solid rgba(0,122,255,.15);border-radius:var(--radius-sm);padding:5px 12px;margin-bottom:10px;font-size:12px;display:none;color:var(--accent);animation:fadeIn .2s ease}
-.status-bar.show{display:block}
-.status-bar.error{background:rgba(255,59,48,.06);border-color:rgba(255,59,48,.2);color:var(--red)}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+      /* ===== Status Bar ===== */
+      .status-bar {
+        background: var(--bg-active);
+        border: 1px solid rgba(0, 122, 255, 0.15);
+        border-radius: var(--radius-sm);
+        padding: 5px 12px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        display: none;
+        color: var(--accent);
+        animation: fadeIn 0.2s ease;
+      }
+      .status-bar.show {
+        display: block;
+      }
+      .status-bar.error {
+        background: rgba(255, 59, 48, 0.06);
+        border-color: rgba(255, 59, 48, 0.2);
+        color: var(--red);
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
 
-.pair-btn{margin-bottom:0}
-.upload-input{display:none}
-.toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(50,50,50,.92);
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
-  color:#fff;
-  padding:8px 16px;
-  border-radius:var(--radius);
-  font-size:12px;
-  z-index:200;
-  transition:opacity .3s;
-  opacity:0;
-  pointer-events:none;
-}
-.toast.show{opacity:1}
+      .pair-btn {
+        margin-bottom: 0;
+      }
+      .upload-input {
+        display: none;
+      }
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(50, 50, 50, 0.92);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        font-size: 12px;
+        z-index: 200;
+        transition: opacity 0.3s;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+      }
 
-/* ===== Progress ===== */
-.progress-bar{height:4px;background:var(--separator-heavy);border-radius:2px;margin-top:4px;overflow:hidden}
-.progress-fill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+      /* ===== Progress ===== */
+      .progress-bar {
+        height: 4px;
+        background: var(--separator-heavy);
+        border-radius: 2px;
+        margin-top: 4px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        width: 0%;
+        transition: width 0.3s;
+      }
 
-/* ===== Transfers ===== */
-.transfers-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.transfers-header h2{font-size:14px;font-weight:600}
-.transfer-stats{display:flex;gap:14px;margin-bottom:10px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}
-.transfer-section{margin-bottom:14px}
-.transfer-section h3{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--separator);text-transform:uppercase;letter-spacing:.5px}
-.transfer-list{display:flex;flex-direction:column;gap:5px}
-.transfer-item{background:var(--bg-card);border:1px solid var(--separator);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:5px}
-.transfer-item.completed{border-color:rgba(52,199,89,.3);opacity:.7}
-.transfer-item.failed{border-color:rgba(255,59,48,.3)}
-.transfer-info{display:flex;align-items:center;gap:6px}
-.transfer-name{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.transfer-status{font-size:11px;padding:1px 6px;border-radius:3px;background:rgba(60,60,67,.05)}
-.transfer-status.transferring{color:var(--accent)}
-.transfer-status.paused{color:var(--orange)}
-.transfer-status.completed{color:var(--green)}
-.transfer-status.failed{color:var(--red)}
-.transfer-status.cancelled{color:var(--text-tertiary)}
-.transfer-error{font-size:11px;color:var(--red);margin-left:6px}
-.transfer-progress{display:flex;align-items:center;gap:6px}
-.transfer-progress .bar{flex:1;height:4px;background:var(--separator-heavy);border-radius:2px;overflow:hidden}
-.transfer-progress .bar .fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
-.transfer-progress .text{font-size:11px;color:var(--text-secondary);font-family:SF Mono,monospace;min-width:110px}
-.transfer-progress .speed{font-size:11px;color:var(--accent);font-family:SF Mono,monospace;min-width:65px}
-.transfer-actions{display:flex;gap:4px}
+      /* ===== Transfers ===== */
+      /* ========= Remote Control ========= */
+      .remote-device-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .remote-device-item:hover {
+        background: var(--bg-hover);
+      }
+      .remote-device-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .remote-device-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .remote-device-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+      .remote-device-status {
+        font-size: 11px;
+        color: #34c759;
+        margin-top: 2px;
+      }
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
-/* ===== Settings ===== */
-.settings-page{max-width:520px;width:100%}
-.settings-section{margin-bottom:16px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--separator);padding:14px}
-.settings-section h3{font-size:13px;font-weight:600;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--separator)}
-.settings-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0}
-.settings-row label{font-size:12px}
-.settings-row .value{font-family:SF Mono,monospace;font-size:20px;letter-spacing:4px;color:var(--accent)}
-.settings-row .hint{font-size:11px;color:var(--text-tertiary);margin-top:2px}
-.trusted-list{list-style:none;display:flex;flex-direction:column;gap:4px}
-.trusted-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg-app);border:1px solid var(--separator);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary)}
-.checkbox-row{display:flex;align-items:center;gap:6px;padding:5px 0}
+      .transfers-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .transfers-header h2 {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .transfer-stats {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+      }
+      .transfer-section {
+        margin-bottom: 14px;
+      }
+      .transfer-section h3 {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid var(--separator);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .transfer-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .transfer-item {
+        background: var(--bg-card);
+        border: 1px solid var(--separator);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .transfer-item.completed {
+        border-color: rgba(52, 199, 89, 0.3);
+        opacity: 0.7;
+      }
+      .transfer-item.failed {
+        border-color: rgba(255, 59, 48, 0.3);
+      }
+      .transfer-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .transfer-name {
+        font-weight: 600;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+      }
+      .transfer-status {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: rgba(60, 60, 67, 0.05);
+      }
+      .transfer-status.transferring {
+        color: var(--accent);
+      }
+      .transfer-status.paused {
+        color: var(--orange);
+      }
+      .transfer-status.completed {
+        color: var(--green);
+      }
+      .transfer-status.failed {
+        color: var(--red);
+      }
+      .transfer-status.cancelled {
+        color: var(--text-tertiary);
+      }
+      .transfer-error {
+        font-size: 11px;
+        color: var(--red);
+        margin-left: 6px;
+      }
+      .transfer-progress {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .transfer-progress .bar {
+        flex: 1;
+        height: 4px;
+        background: var(--separator-heavy);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .transfer-progress .bar .fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.3s;
+      }
+      .transfer-progress .text {
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-family:
+          SF Mono,
+          monospace;
+        min-width: 110px;
+      }
+      .transfer-progress .speed {
+        font-size: 11px;
+        color: var(--accent);
+        font-family:
+          SF Mono,
+          monospace;
+        min-width: 65px;
+      }
+      .transfer-actions {
+        display: flex;
+        gap: 4px;
+      }
 
-/* ===== Toast ===== */
-.toast{z-index:200}
+      /* ===== Settings ===== */
+      .settings-page {
+        max-width: 520px;
+        width: 100%;
+      }
+      .settings-section {
+        margin-bottom: 16px;
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        border: 1px solid var(--separator);
+        padding: 14px;
+      }
+      .settings-section h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid var(--separator);
+      }
+      .settings-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 0;
+      }
+      .settings-row label {
+        font-size: 12px;
+      }
+      .settings-row .value {
+        font-family:
+          SF Mono,
+          monospace;
+        font-size: 20px;
+        letter-spacing: 4px;
+        color: var(--accent);
+      }
+      .settings-row .hint {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        margin-top: 2px;
+      }
+      .trusted-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .trusted-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 8px;
+        background: var(--bg-app);
+        border: 1px solid var(--separator);
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 0;
+      }
 
-@media(max-width:640px){
-  td.time{display:none}
-  th.col-time{display:none}
-  .container{padding:10px}
-}
+      /* ===== Toast ===== */
+      .toast {
+        z-index: 200;
+      }
 
-/* ===== Web Chat Styles ===== */
-#tab-friends.tab-content{height:100%}
-.chat-page{
-  display:flex;
-  flex-direction:column;
-  height:100%;
-  position:relative;
-  flex:1;
-  background:var(--bg-card);
-  margin:0;
-}
-.chat-w-header{
-  padding:10px 14px;
-  border-bottom:1px solid var(--separator);
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-shrink:0;
-}
-.chat-w-header h3{font-size:13px;font-weight:600;margin:0}
-.chat-w-hint{font-size:11px;color:var(--text-tertiary)}
-.chat-w-messages{
-  flex:1;
-  overflow-y:auto;
-  padding:12px 14px;
-  display:flex;
-  flex-direction:column;
-}
-.chat-w-messages .chat-empty{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  height:100%;
-  color:var(--text-tertiary);
-  font-size:13px;
-}
-.chat-date-group{margin-bottom:4px}
-.chat-date-sep{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin:12px 0;
-}
-.chat-date-sep span{
-  font-size:11px;
-  color:var(--text-tertiary);
-  background:var(--bg-app);
-  padding:2px 12px;
-  border-radius:10px;
-}
-.chat-w-msg{
-  display:flex;
-  gap:8px;
-  margin-bottom:10px;
-  max-width:80%;
-}
-.chat-w-msg.self{align-self:flex-end;flex-direction:row-reverse}
-.chat-w-msg.other{align-self:flex-start}
-.chat-w-avatar{
-  width:32px;height:32px;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:12px;font-weight:600;
-  color:#fff;
-  flex-shrink:0;
-  user-select:none;
-  margin-top:2px;
-}
-.chat-w-body{display:flex;flex-direction:column;gap:2px;max-width:calc(100% - 40px);align-items:flex-start}
-.chat-w-msg.self .chat-w-body{align-items:flex-end}
-.chat-w-sender{font-size:11px;font-weight:500;color:var(--accent);margin-bottom:2px;padding-left:2px}
-.chat-w-bubble{
-  padding:8px 12px;
-  border-radius:12px;
-  font-size:13px;
-  line-height:1.45;
-  word-break:break-word;
-  white-space:pre-wrap;
-  width:fit-content;
-  max-width:100%;
-}
-.chat-w-msg.other .chat-w-bubble{background:rgba(0,122,255,.1);border-bottom-left-radius:4px}
-.chat-w-msg.self .chat-w-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
-.chat-w-time{font-size:10px;color:var(--text-tertiary);margin-top:2px;padding-left:2px}
-.chat-w-msg.self .chat-w-time{text-align:right;padding-right:2px}
+      @media (max-width: 640px) {
+        td.time {
+          display: none;
+        }
+        th.col-time {
+          display: none;
+        }
+        .container {
+          padding: 10px;
+        }
+      }
 
-/* File Card */
-.file-w-card{
-  display:flex;align-items:center;gap:8px;
-  padding:6px 10px;
-  background:var(--bg-app);
-  border:1px solid var(--separator);
-  border-radius:8px;
-  cursor:pointer;
-  max-width:240px;
-  transition:all .15s;
-}
-.file-w-card:hover{border-color:var(--accent)}
-.file-w-icon{font-size:22px;flex-shrink:0}
-.file-w-info{flex:1;min-width:0}
-.file-w-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-w-size{font-size:10px;color:var(--text-tertiary);margin-top:1px}
-.file-w-dl{font-size:13px;flex-shrink:0}
-.file-w-done{border-color:var(--accent);background:rgba(0,122,255,.05)}
-.file-w-card{position:relative;overflow:hidden}
-.file-w-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--separator);border-radius:0 0 8px 8px;overflow:hidden}
-.file-w-progress-bar{height:100%;background:var(--accent);border-radius:0 0 8px 8px;width:40%;animation:w-progress-indeterminate 1.5s ease-in-out infinite}
-@keyframes w-progress-indeterminate{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+      /* ===== Web Chat Styles ===== */
+      #tab-friends.tab-content {
+        height: 100%;
+      }
+      .chat-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+        flex: 1;
+        background: var(--bg-card);
+        margin: 0;
+      }
+      .chat-w-header {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--separator);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .chat-w-header h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .chat-w-hint {
+        font-size: 11px;
+        color: var(--text-tertiary);
+      }
+      .chat-w-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat-w-messages .chat-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-tertiary);
+        font-size: 13px;
+      }
+      .chat-date-group {
+        margin-bottom: 4px;
+      }
+      .chat-date-sep {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 12px 0;
+      }
+      .chat-date-sep span {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        background: var(--bg-app);
+        padding: 2px 12px;
+        border-radius: 10px;
+      }
+      .chat-w-msg {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        max-width: 80%;
+      }
+      .chat-w-msg.self {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+      }
+      .chat-w-msg.other {
+        align-self: flex-start;
+      }
+      .chat-w-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        flex-shrink: 0;
+        user-select: none;
+        margin-top: 2px;
+      }
+      .chat-w-body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: calc(100% - 40px);
+        align-items: flex-start;
+      }
+      .chat-w-msg.self .chat-w-body {
+        align-items: flex-end;
+      }
+      .chat-w-sender {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--accent);
+        margin-bottom: 2px;
+        padding-left: 2px;
+      }
+      .chat-w-bubble {
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.45;
+        word-break: break-word;
+        white-space: pre-wrap;
+        width: fit-content;
+        max-width: 100%;
+      }
+      .chat-w-msg.other .chat-w-bubble {
+        background: rgba(0, 122, 255, 0.1);
+        border-bottom-left-radius: 4px;
+      }
+      .chat-w-msg.self .chat-w-bubble {
+        background: var(--accent);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+      .chat-w-time {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        margin-top: 2px;
+        padding-left: 2px;
+      }
+      .chat-w-msg.self .chat-w-time {
+        text-align: right;
+        padding-right: 2px;
+      }
 
-/* Image Thumb */
-.img-w-thumb{
-  max-width:180px;max-height:180px;
-  border-radius:8px;overflow:hidden;
-  cursor:pointer;border:1px solid var(--separator);
-  transition:opacity .15s;
-}
-.img-w-thumb:hover{opacity:.85}
-.img-w-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+      /* File Card */
+      .file-w-card {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: var(--bg-app);
+        border: 1px solid var(--separator);
+        border-radius: 8px;
+        cursor: pointer;
+        max-width: 240px;
+        transition: all 0.15s;
+      }
+      .file-w-card:hover {
+        border-color: var(--accent);
+      }
+      .file-w-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+      .file-w-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .file-w-name {
+        font-size: 12px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .file-w-size {
+        font-size: 10px;
+        color: var(--text-tertiary);
+        margin-top: 1px;
+      }
+      .file-w-dl {
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .file-w-done {
+        border-color: var(--accent);
+        background: rgba(0, 122, 255, 0.05);
+      }
+      .file-w-card {
+        position: relative;
+        overflow: hidden;
+      }
+      .file-w-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--separator);
+        border-radius: 0 0 8px 8px;
+        overflow: hidden;
+      }
+      .file-w-progress-bar {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 0 0 8px 8px;
+        width: 40%;
+        animation: w-progress-indeterminate 1.5s ease-in-out infinite;
+      }
+      @keyframes w-progress-indeterminate {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(350%);
+        }
+      }
 
-/* Input */
-.chat-w-input-area{
-  display:flex;gap:6px;
-  padding:8px 12px;
-  border-top:1px solid var(--separator);
-  align-items:flex-end;
-  flex-shrink:0;
-}
-.chat-input-wrap{flex:1}
-.chat-input-wrap textarea{
-  width:100%;
-  padding:7px 10px;
-  background:var(--bg-app);
-  border:1px solid var(--separator-heavy);
-  color:var(--text-primary);
-  border-radius:var(--radius);
-  font-size:13px;font-family:inherit;
-  outline:none;resize:none;
-  transition:border-color .15s;
-  box-sizing:border-box;
-}
-.chat-input-wrap textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,122,255,.15)}
-.chat-tool-btn{
-  width:32px;height:32px;
-  border:none;background:transparent;
-  color:var(--text-secondary);
-  font-size:18px;cursor:pointer;
-  border-radius:var(--radius-sm);
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;flex-shrink:0;
-}
-.chat-tool-btn:hover{background:var(--bg-hover);color:var(--accent)}
-.chat-w-send-btn{
-  height:32px;white-space:nowrap;flex-shrink:0;
-  padding:4px 14px;
-  border:1px solid var(--accent);
-  border-radius:var(--radius-sm);
-  background:var(--accent);
-  color:#fff;
-  font-size:12px;font-family:inherit;font-weight:500;
-  cursor:pointer;
-  transition:all .15s;
-}
-.chat-w-send-btn:hover{background:var(--accent-hover)}
-.chat-w-send-btn:disabled{opacity:.5;cursor:not-allowed}
+      /* Image Thumb */
+      .img-w-thumb {
+        max-width: 180px;
+        max-height: 180px;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        border: 1px solid var(--separator);
+        transition: opacity 0.15s;
+      }
+      .img-w-thumb:hover {
+        opacity: 0.85;
+      }
+      .img-w-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
 
-/* Emoji Picker */
-.emoji-picker{
-  display:none;
-  flex-wrap:wrap;gap:4px;
-  padding:8px;
-  font-size:20px;line-height:1.6;
-  background:var(--bg-card);
-  border:1px solid var(--separator-heavy);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-elevated);
-  max-height:150px;
-  overflow-y:auto;
-  position:absolute;
-  bottom:56px;right:80px;
-  z-index:100;
-  width:280px;
-  cursor:pointer;
-}
-.emoji-picker.show{display:flex}
-.emoji-picker span{
-  width:30px;height:30px;
-  text-align:center;
-  cursor:pointer;
-  border-radius:4px;
-}
-.emoji-picker span:hover{background:var(--bg-hover)}
+      /* Input */
+      .chat-w-input-area {
+        display: flex;
+        gap: 6px;
+        padding: 8px 12px;
+        border-top: 1px solid var(--separator);
+        align-items: flex-end;
+        flex-shrink: 0;
+      }
+      .chat-input-wrap {
+        flex: 1;
+      }
+      .chat-input-wrap textarea {
+        width: 100%;
+        padding: 7px 10px;
+        background: var(--bg-app);
+        border: 1px solid var(--separator-heavy);
+        color: var(--text-primary);
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        resize: none;
+        transition: border-color 0.15s;
+        box-sizing: border-box;
+      }
+      .chat-input-wrap textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+      }
+      .chat-tool-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 18px;
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        flex-shrink: 0;
+      }
+      .chat-tool-btn:hover {
+        background: var(--bg-hover);
+        color: var(--accent);
+      }
+      .chat-w-send-btn {
+        height: 32px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 4px 14px;
+        border: 1px solid var(--accent);
+        border-radius: var(--radius-sm);
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .chat-w-send-btn:hover {
+        background: var(--accent-hover);
+      }
+      .chat-w-send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
-/* Image Preview */
-.image-preview-wrap{
-  position:relative;
-  max-width:80vw;max-height:80vh;
-}
-.image-preview-wrap img{
-  max-width:80vw;max-height:80vh;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-elevated);
-  display:block;
-}
-.image-preview-close{
-  position:absolute;top:-12px;right:-12px;
-  width:28px;height:28px;
-  border-radius:50%;border:none;
-  background:var(--bg-card);color:var(--text-primary);
-  font-size:14px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow);
-}
-</style>
-</head>
-<body>
+      /* Emoji Picker */
+      .emoji-picker {
+        display: none;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 8px;
+        font-size: 20px;
+        line-height: 1.6;
+        background: var(--bg-card);
+        border: 1px solid var(--separator-heavy);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-elevated);
+        max-height: 150px;
+        overflow-y: auto;
+        position: absolute;
+        bottom: 56px;
+        right: 80px;
+        z-index: 100;
+        width: 280px;
+        cursor: pointer;
+      }
+      .emoji-picker.show {
+        display: flex;
+      }
+      .emoji-picker span {
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .emoji-picker span:hover {
+        background: var(--bg-hover);
+      }
 
-<header>
-  <h1>ffeel</h1>
-  <span class="device-info" id="header-device"></span>
-</header>
+      /* Image Preview */
+      .image-preview-wrap {
+        position: relative;
+        max-width: 80vw;
+        max-height: 80vh;
+      }
+      .image-preview-wrap img {
+        max-width: 80vw;
+        max-height: 80vh;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-elevated);
+        display: block;
+      }
+      .image-preview-close {
+        position: absolute;
+        top: -12px;
+        right: -12px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ffeel</h1>
+      <span class="device-info" id="header-device"></span>
+    </header>
 
-<!-- Pairing Modal -->
-<div id="pairing-overlay" class="modal-overlay">
-  <div class="modal">
-    <h2>设备配对</h2>
-    <p>请输入 ffeel 显示的四位数配对码</p>
-    <input type="text" id="pair-code" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
-    <div class="error" id="pair-error"></div>
-    <button class="pair-btn primary" id="pair-submit" style="margin-top:16px;padding:8px 32px;font-size:15px">配对</button>
-    <div class="hint">在 ffeel 设置页查看或刷新配对码</div>
-  </div>
-</div>
-
-<div class="app-layout">
-  <!-- Sidebar -->
-  <aside class="app-sidebar">
-    <nav class="sidebar-nav">
-      <button class="sidebar-tab active" data-tab="files">📁 文件</button>
-      <button class="sidebar-tab" data-tab="friends">👥 好友</button>
-      <button class="sidebar-tab" data-tab="transfers">⬇️ 传输</button>
-      <button class="sidebar-tab" data-tab="settings">⚙️ 设置</button>
-    </nav>
-  </aside>
-  <main class="app-content">
-
-<!-- Files Tab -->
-<div id="tab-files" class="tab-content active">
-<div class="container">
-
-  <div class="status-bar" id="status-bar"></div>
-
-  <div class="toolbar">
-    <button id="btn-up" disabled>⬆ 上级</button>
-    <button id="btn-upload">⬆ 上传</button>
-    <button id="btn-refresh">🔄 刷新</button>
-    <input type="file" id="file-input" class="upload-input" multiple>
-  </div>
-
-  <div class="breadcrumb" id="breadcrumb"></div>
-
-  <div class="search-bar">
-    <input type="text" id="search-input" placeholder="搜索文件名...">
-    <button id="search-clear" style="display:none">清除</button>
-  </div>
-
-  <div id="batch-bar" class="batch-bar" style="display:none">
-    <span id="batch-count">已选择 0 项</span>
-    <button id="batch-download" class="primary">下载选中</button>
-    <button id="batch-clear">取消</button>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:32px"><input type="checkbox" id="select-all"></th>
-          <th class="col-name">名称</th>
-          <th class="col-size">大小</th>
-          <th class="col-time">修改时间</th>
-          <th class="col-action">操作</th>
-        </tr>
-      </thead>
-      <tbody id="file-list"></tbody>
-    </table>
-  </div>
-  <div id="loading-more" class="loading" style="display:none"><span class="spinner"></span>加载中...</div>
-  <div id="end-marker"></div>
-</div>
-</div>
-
-<!-- Friends Tab -->
-<div id="tab-friends" class="tab-content">
-
-<div class="friends-layout">
-  <!-- Friends Sidebar -->
-  <div class="friends-sidebar-panel">
-    <div class="friends-panel-title">好友 (<span id="friends-panel-count">0</span>)</div>
-    <div class="friends-panel-online" id="friends-panel-hint">连接中...</div>
-    <div id="friends-panel-list"></div>
-  </div>
-
-  <!-- Chat Panel -->
-  <div class="chat-page" id="chat-page">
-    <!-- Chat Header -->
-    <div class="chat-w-header">
-      <h3>聊天</h3>
-    </div>
-
-    <!-- Messages -->
-    <div class="chat-w-messages" id="chat-messages">
-      <div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary);margin-bottom:4px">请选择好友开始聊天</p><p style="font-size:12px;color:var(--text-tertiary)">从左侧列表选择一个好友</p></div>
-    </div>
-
-    <!-- Input Area -->
-    <div class="chat-w-input-area" style="display:none">
-      <input type="file" id="chat-file-input" style="display:none">
-      <button class="chat-tool-btn" id="chat-attach-btn" title="发送文件">📎</button>
-      <div class="chat-input-wrap">
-        <textarea id="chat-input" placeholder="输入消息..." rows="1"></textarea>
+    <!-- Pairing Modal -->
+    <div id="pairing-overlay" class="modal-overlay">
+      <div class="modal">
+        <h2>设备配对</h2>
+        <p>请输入 ffeel 显示的四位数配对码</p>
+        <input
+          type="text"
+          id="pair-code"
+          maxlength="4"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          autocomplete="off"
+        />
+        <div class="error" id="pair-error"></div>
+        <button
+          class="pair-btn primary"
+          id="pair-submit"
+          style="margin-top: 16px; padding: 8px 32px; font-size: 15px"
+        >
+          配对
+        </button>
+        <div class="hint">在 ffeel 设置页查看或刷新配对码</div>
       </div>
-      <button class="chat-tool-btn" id="chat-emoji-btn" title="表情">😊</button>
-      <button class="chat-w-send-btn" id="chat-send-btn">发送</button>
     </div>
 
-    <!-- Emoji Picker -->
-    <div class="emoji-picker" id="emoji-picker">
-      <span>😀</span><span>😃</span><span>😄</span><span>😁</span><span>😅</span><span>😂</span><span>🤣</span><span>😊</span>
-      <span>😇</span><span>🙂</span><span>😉</span><span>😌</span><span>😍</span><span>🥰</span><span>😘</span><span>😗</span>
-      <span>😋</span><span>😛</span><span>😜</span><span>🤪</span><span>😝</span><span>🤑</span><span>🤗</span><span>🤭</span>
-      <span>🤔</span><span>🤐</span><span>😐</span><span>😑</span><span>😶</span><span>😏</span><span>😒</span><span>🙄</span>
-      <span>😬</span><span>😮</span><span>😯</span><span>😲</span><span>😳</span><span>🥺</span><span>😢</span><span>😭</span>
-      <span>😤</span><span>😠</span><span>😡</span><span>🤬</span><span>😈</span><span>👿</span><span>💀</span><span>☠️</span>
-      <span>💩</span><span>🤡</span><span>👹</span><span>👺</span><span>👻</span><span>👽</span><span>🤖</span><span>🎃</span>
-      <span>👍</span><span>👎</span><span>👊</span><span>✊</span><span>🤛</span><span>🤜</span><span>👏</span><span>🙌</span>
-      <span>🤝</span><span>💪</span><span>✌️</span><span>🤞</span><span>🖕</span><span>🤟</span><span>🤘</span><span>👌</span>
-      <span>❤️</span><span>🧡</span><span>💛</span><span>💚</span><span>💙</span><span>💜</span><span>🖤</span><span>🤍</span>
-      <span>💯</span><span>🔥</span><span>⭐</span><span>✨</span><span>💥</span><span>🌈</span><span>☀️</span><span>🌙</span>
+    <div class="app-layout">
+      <!-- Sidebar -->
+      <aside class="app-sidebar">
+        <nav class="sidebar-nav">
+          <button class="sidebar-tab active" data-tab="files">📁 文件</button>
+          <button class="sidebar-tab" data-tab="friends">👥 好友</button>
+          <button class="sidebar-tab" data-tab="remote">🖥️ 远程</button>
+          <button class="sidebar-tab" data-tab="transfers">⬇️ 传输</button>
+          <button class="sidebar-tab" data-tab="settings">⚙️ 设置</button>
+        </nav>
+      </aside>
+      <main class="app-content">
+        <!-- Files Tab -->
+        <div id="tab-files" class="tab-content active">
+          <div class="container">
+            <div class="status-bar" id="status-bar"></div>
+
+            <div class="toolbar">
+              <button id="btn-up" disabled>⬆ 上级</button>
+              <button id="btn-upload">⬆ 上传</button>
+              <button id="btn-refresh">🔄 刷新</button>
+              <input
+                type="file"
+                id="file-input"
+                class="upload-input"
+                multiple
+              />
+            </div>
+
+            <div class="breadcrumb" id="breadcrumb"></div>
+
+            <div class="search-bar">
+              <input
+                type="text"
+                id="search-input"
+                placeholder="搜索文件名..."
+              />
+              <button id="search-clear" style="display: none">清除</button>
+            </div>
+
+            <div id="batch-bar" class="batch-bar" style="display: none">
+              <span id="batch-count">已选择 0 项</span>
+              <button id="batch-download" class="primary">下载选中</button>
+              <button id="batch-clear">取消</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 32px">
+                      <input type="checkbox" id="select-all" />
+                    </th>
+                    <th class="col-name">名称</th>
+                    <th class="col-size">大小</th>
+                    <th class="col-time">修改时间</th>
+                    <th class="col-action">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="file-list"></tbody>
+              </table>
+            </div>
+            <div id="loading-more" class="loading" style="display: none">
+              <span class="spinner"></span>加载中...
+            </div>
+            <div id="end-marker"></div>
+          </div>
+        </div>
+
+        <!-- Friends Tab -->
+        <div id="tab-friends" class="tab-content">
+          <div class="friends-layout">
+            <!-- Friends Sidebar -->
+            <div class="friends-sidebar-panel">
+              <div class="friends-panel-title">
+                好友 (<span id="friends-panel-count">0</span>)
+              </div>
+              <div class="friends-panel-online" id="friends-panel-hint">
+                连接中...
+              </div>
+              <div id="friends-panel-list"></div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-page" id="chat-page">
+              <!-- Chat Header -->
+              <div class="chat-w-header">
+                <h3>聊天</h3>
+              </div>
+
+              <!-- Messages -->
+              <div class="chat-w-messages" id="chat-messages">
+                <div class="chat-empty">
+                  <p
+                    style="
+                      font-size: 14px;
+                      color: var(--text-tertiary);
+                      margin-bottom: 4px;
+                    "
+                  >
+                    请选择好友开始聊天
+                  </p>
+                  <p style="font-size: 12px; color: var(--text-tertiary)">
+                    从左侧列表选择一个好友
+                  </p>
+                </div>
+              </div>
+
+              <!-- Input Area -->
+              <div class="chat-w-input-area" style="display: none">
+                <input type="file" id="chat-file-input" style="display: none" />
+                <button
+                  class="chat-tool-btn"
+                  id="chat-attach-btn"
+                  title="发送文件"
+                >
+                  📎
+                </button>
+                <div class="chat-input-wrap">
+                  <textarea
+                    id="chat-input"
+                    placeholder="输入消息..."
+                    rows="1"
+                  ></textarea>
+                </div>
+                <button class="chat-tool-btn" id="chat-emoji-btn" title="表情">
+                  😊
+                </button>
+                <button class="chat-w-send-btn" id="chat-send-btn">发送</button>
+              </div>
+
+              <!-- Emoji Picker -->
+              <div class="emoji-picker" id="emoji-picker">
+                <span>😀</span><span>😃</span><span>😄</span><span>😁</span
+                ><span>😅</span><span>😂</span><span>🤣</span><span>😊</span>
+                <span>😇</span><span>🙂</span><span>😉</span><span>😌</span
+                ><span>😍</span><span>🥰</span><span>😘</span><span>😗</span>
+                <span>😋</span><span>😛</span><span>😜</span><span>🤪</span
+                ><span>😝</span><span>🤑</span><span>🤗</span><span>🤭</span>
+                <span>🤔</span><span>🤐</span><span>😐</span><span>😑</span
+                ><span>😶</span><span>😏</span><span>😒</span><span>🙄</span>
+                <span>😬</span><span>😮</span><span>😯</span><span>😲</span
+                ><span>😳</span><span>🥺</span><span>😢</span><span>😭</span>
+                <span>😤</span><span>😠</span><span>😡</span><span>🤬</span
+                ><span>😈</span><span>👿</span><span>💀</span><span>☠️</span>
+                <span>💩</span><span>🤡</span><span>👹</span><span>👺</span
+                ><span>👻</span><span>👽</span><span>🤖</span><span>🎃</span>
+                <span>👍</span><span>👎</span><span>👊</span><span>✊</span
+                ><span>🤛</span><span>🤜</span><span>👏</span><span>🙌</span>
+                <span>🤝</span><span>💪</span><span>✌️</span><span>🤞</span
+                ><span>🖕</span><span>🤟</span><span>🤘</span><span>👌</span>
+                <span>❤️</span><span>🧡</span><span>💛</span><span>💚</span
+                ><span>💙</span><span>💜</span><span>🖤</span><span>🤍</span>
+                <span>💯</span><span>🔥</span><span>⭐</span><span>✨</span
+                ><span>💥</span><span>🌈</span><span>☀️</span><span>🌙</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Preview Modal -->
+        <div
+          id="image-preview-modal"
+          class="modal-overlay"
+          style="display: none"
+        >
+          <div class="image-preview-wrap">
+            <img id="image-preview-img" src="" alt="预览" />
+            <button class="image-preview-close" id="image-preview-close">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Transfers Tab -->
+        <!-- Remote Control Tab -->
+        <div id="tab-remote" class="tab-content">
+          <div
+            class="container"
+            style="display: flex; flex-direction: column; height: 100%"
+          >
+            <div
+              class="remote-header"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+              "
+            >
+              <h3>远程控制</h3>
+              <div
+                id="remote-status"
+                style="font-size: 12px; color: var(--text-tertiary)"
+              >
+                未连接
+              </div>
+            </div>
+
+            <div
+              id="remote-device-list"
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 1;
+                overflow-y: auto;
+              "
+            >
+              <p
+                style="
+                  text-align: center;
+                  padding: 40px 0;
+                  color: var(--text-tertiary);
+                "
+              >
+                暂无设备
+              </p>
+            </div>
+
+            <div
+              id="remote-screen-area"
+              style="display: none; flex-direction: column; flex: 1; gap: 8px"
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  padding: 8px 12px;
+                  background: var(--bg-content);
+                  border-radius: 8px;
+                "
+              >
+                <span
+                  id="remote-screen-title"
+                  style="font-weight: 600; font-size: 13px; flex: 1"
+                  >远程屏幕</span
+                >
+                <span
+                  id="remote-screen-stats"
+                  style="font-size: 11px; color: var(--text-tertiary)"
+                ></span>
+                <select
+                  id="monitor-selector"
+                  style="
+                    display: none;
+                    font-size: 12px;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                  "
+                ></select>
+                <button
+                  class="pair-btn"
+                  id="btn-remote-clipboard"
+                  style="font-size: 12px"
+                  onclick="sendRemoteClipboard()"
+                >
+                  同步剪贴板
+                </button>
+                <button
+                  class="pair-btn"
+                  id="btn-remote-record"
+                  style="font-size: 12px"
+                  onclick="toggleRecording()"
+                >
+                  录制
+                </button>
+                <button
+                  class="pair-btn"
+                  id="btn-remote-fullscreen"
+                  style="font-size: 12px"
+                  onclick="toggleFullscreen()"
+                >
+                  全屏
+                </button>
+                <button
+                  class="pair-btn"
+                  id="btn-remote-disconnect"
+                  style="font-size: 12px"
+                >
+                  断开
+                </button>
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  background: #000;
+                  border-radius: 12px;
+                  overflow: hidden;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 300px;
+                "
+              >
+                <img
+                  id="remote-screen-img"
+                  src=""
+                  alt="远程屏幕"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    display: none;
+                  "
+                />
+                <div
+                  id="remote-screen-loading"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 12px;
+                    color: #999;
+                  "
+                >
+                  <div class="spinner"></div>
+                  <p>连接中...</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="remote-error"
+              style="
+                display: none;
+                padding: 8px 12px;
+                background: rgba(255, 59, 48, 0.1);
+                border: 1px solid rgba(255, 59, 48, 0.3);
+                border-radius: 8px;
+                color: var(--red);
+                font-size: 12px;
+                margin-top: 8px;
+              "
+            ></div>
+          </div>
+        </div>
+
+        <div id="tab-transfers" class="tab-content">
+          <div class="container">
+            <div class="transfers-header">
+              <h2>传输管理</h2>
+              <button class="pair-btn" id="refresh-transfers">刷新</button>
+            </div>
+
+            <div class="transfer-stats" id="transfer-stats">
+              <span>进行中: <strong id="stat-active">0</strong></span>
+              <span>已完成: <strong id="stat-completed">0</strong></span>
+              <span>失败: <strong id="stat-failed">0</strong></span>
+            </div>
+
+            <div id="transfers-content"></div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="tab-settings" class="tab-content">
+          <div class="container settings-page">
+            <div class="settings-section">
+              <h3>配对码</h3>
+              <div class="settings-row">
+                <div>
+                  <label>当前配对码</label>
+                  <div class="hint">将此码提供给要配对的设备</div>
+                </div>
+                <span class="value" id="pairing-code-display">----</span>
+              </div>
+              <div class="settings-row">
+                <button class="pair-btn" id="rotate-code-btn">
+                  🔄 刷新配对码
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>信任设备</h3>
+              <div id="trusted-devices-container">
+                <p class="empty" style="padding: 12px 0">暂无信任设备</p>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>设置</h3>
+              <div class="checkbox-row">
+                <input type="checkbox" id="require-pairing-chk" />
+                <label for="require-pairing-chk">需要配对认证</label>
+              </div>
+              <div style="margin-top: 10px">
+                <button class="pair-btn primary" id="save-settings-btn">
+                  保存设置
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /tab-settings -->
+      </main>
+      <!-- /app-content -->
     </div>
-  </div>
-</div>
+    <!-- /app-layout -->
 
-</div>
+    <div class="toast" id="toast"></div>
 
-<!-- Image Preview Modal -->
-<div id="image-preview-modal" class="modal-overlay" style="display:none">
-  <div class="image-preview-wrap">
-    <img id="image-preview-img" src="" alt="预览">
-    <button class="image-preview-close" id="image-preview-close">✕</button>
-  </div>
-</div>
+    <script>
+      (function(){
+      'use strict';
 
-<!-- Transfers Tab -->
-<div id="tab-transfers" class="tab-content">
-<div class="container">
+      // ============== Globals ==============
 
-  <div class="transfers-header">
-    <h2>传输管理</h2>
-    <button class="pair-btn" id="refresh-transfers">刷新</button>
-  </div>
+      const DEVICE_KEY = 'ffeel_device_id';
+      const PAIRED_KEY = 'ffeel_paired';
+      let deviceId = localStorage.getItem(DEVICE_KEY);
+      let paired = localStorage.getItem(PAIRED_KEY) === '1';
+      let currentPath = '';
+      let entries = [];
+      let hasMore = true;
+      let loading = false;
+      let offset = 0;
+      const PAGE_SIZE = 100;
+      let searchQuery = '';
+      let selected = new Set();
+      let transfers = [];
+      let ws = null;
 
-  <div class="transfer-stats" id="transfer-stats">
-    <span>进行中: <strong id="stat-active">0</strong></span>
-    <span>已完成: <strong id="stat-completed">0</strong></span>
-    <span>失败: <strong id="stat-failed">0</strong></span>
-  </div>
+      if (!deviceId) {
+        const arr = new Uint8Array(16);
+        crypto.getRandomValues(arr);
+        deviceId = 'web-' + Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+        localStorage.setItem(DEVICE_KEY, deviceId);
+      }
 
-  <div id="transfers-content"></div>
+      // 设备名称
+      let deviceName = localStorage.getItem('ffeel_device_name');
+      if (!deviceName) {
+        const browserName = navigator.userAgent.includes('Chrome') ? 'Chrome' :
+                            navigator.userAgent.includes('Safari') ? 'Safari' : '浏览器';
+        deviceName = browserName + '-' + deviceId.substring(0, 6);
+        localStorage.setItem('ffeel_device_name', deviceName);
+      }
 
-</div>
-</div>
+      function api(path, opts) {
+        const headers = Object.assign({}, (opts && opts.headers) || {});
+        headers['x-device-id'] = deviceId;
+        headers['x-device-name'] = deviceName;
+        return fetch(path, Object.assign({}, opts, { headers })).then(r => {
+          if (r.status === 403) return r.json().then(d => { throw new Error(d.error || '设备未配对'); });
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error || '请求失败'); });
+          return r;
+        });
+      }
 
-<!-- Settings Tab -->
-<div id="tab-settings" class="tab-content">
-<div class="container settings-page">
+      function showPairing() {
+        document.getElementById('pairing-overlay').style.display = 'flex';
+        hideAllTabs();
+      }
 
-  <div class="settings-section">
-    <h3>配对码</h3>
-    <div class="settings-row">
-      <div>
-        <label>当前配对码</label>
-        <div class="hint">将此码提供给要配对的设备</div>
-      </div>
-      <span class="value" id="pairing-code-display">----</span>
-    </div>
-    <div class="settings-row">
-      <button class="pair-btn" id="rotate-code-btn">🔄 刷新配对码</button>
-    </div>
-  </div>
+      function hidePairing() {
+        document.getElementById('pairing-overlay').style.display = 'none';
+        const savedTab = localStorage.getItem('ffeel_active_tab') || 'files';
+        showTab(savedTab);
+      }
 
-  <div class="settings-section">
-    <h3>信任设备</h3>
-    <div id="trusted-devices-container">
-      <p class="empty" style="padding:12px 0">暂无信任设备</p>
-    </div>
-  </div>
+      function hideAllTabs() {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar-tab').forEach(el => el.classList.remove('active'));
+      }
 
-  <div class="settings-section">
-    <h3>设置</h3>
-    <div class="checkbox-row">
-      <input type="checkbox" id="require-pairing-chk">
-      <label for="require-pairing-chk">需要配对认证</label>
-    </div>
-    <div style="margin-top:10px">
-      <button class="pair-btn primary" id="save-settings-btn">保存设置</button>
-    </div>
-  </div>
+      function showTab(name) {
+        hideAllTabs();
+        document.getElementById('tab-' + name).classList.add('active');
+        document.querySelector('.sidebar-tab[data-tab="' + name + '"]').classList.add('active');
+        localStorage.setItem('ffeel_active_tab', name);
+      }
 
-</div>
-</div> <!-- /tab-settings -->
+      function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+      }
 
-  </main> <!-- /app-content -->
-</div> <!-- /app-layout -->
+      function statusBar(msg, isError) {
+        const el = document.getElementById('status-bar');
+        el.textContent = msg;
+        el.className = 'status-bar show' + (isError ? ' error' : '');
+        setTimeout(() => el.classList.remove('show'), 4000);
+      }
 
-<div class="toast" id="toast"></div>
+      function formatSize(bytes) {
+        if (!bytes && bytes !== 0) return '-';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+        if (bytes < 1073741824) return (bytes/1048576).toFixed(1) + ' MB';
+        return (bytes/1073741824).toFixed(2) + ' GB';
+      }
 
-<script>
-(function(){
-'use strict';
+      function formatTime(ts) {
+        if (!ts) return '-';
+        const d = new Date(parseInt(ts) * 1000);
+        return d.toLocaleString();
+      }
 
-// ============== Globals ==============
+      function formatSpeed(speed) {
+        if (!speed || speed === 0) return '-';
+        if (speed < 1024) return speed.toFixed(0) + ' B/s';
+        if (speed < 1048576) return (speed/1024).toFixed(1) + ' KB/s';
+        return (speed/1048576).toFixed(1) + ' MB/s';
+      }
 
-const DEVICE_KEY = 'ffeel_device_id';
-const PAIRED_KEY = 'ffeel_paired';
-let deviceId = localStorage.getItem(DEVICE_KEY);
-let paired = localStorage.getItem(PAIRED_KEY) === '1';
-let currentPath = '';
-let entries = [];
-let hasMore = true;
-let loading = false;
-let offset = 0;
-const PAGE_SIZE = 100;
-let searchQuery = '';
-let selected = new Set();
-let transfers = [];
-let ws = null;
+      // ============== Tab Switching ==============
 
-if (!deviceId) {
-  const arr = new Uint8Array(16);
-  crypto.getRandomValues(arr);
-  deviceId = 'web-' + Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
-  localStorage.setItem(DEVICE_KEY, deviceId);
-}
+      document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const name = this.dataset.tab;
+          showTab(name);
+          if (name === 'transfers') { loadTransfers(); stopChatPolling(); }
+          if (name === 'settings') { loadSettings(); stopChatPolling(); }
+          if (name === 'files') { stopChatPolling(); }
+          if (name === 'friends') { loadChatMessages(); startChatPolling(); }
+        });
+      });
 
-// 设备名称
-let deviceName = localStorage.getItem('ffeel_device_name');
-if (!deviceName) {
-  const browserName = navigator.userAgent.includes('Chrome') ? 'Chrome' :
-                      navigator.userAgent.includes('Safari') ? 'Safari' : '浏览器';
-  deviceName = browserName + '-' + deviceId.substring(0, 6);
-  localStorage.setItem('ffeel_device_name', deviceName);
-}
+      // ============== Pairing ==============
 
-function api(path, opts) {
-  const headers = Object.assign({}, (opts && opts.headers) || {});
-  headers['x-device-id'] = deviceId;
-  headers['x-device-name'] = deviceName;
-  return fetch(path, Object.assign({}, opts, { headers })).then(r => {
-    if (r.status === 403) return r.json().then(d => { throw new Error(d.error || '设备未配对'); });
-    if (!r.ok) return r.json().then(d => { throw new Error(d.error || '请求失败'); });
-    return r;
-  });
-}
+      // 自动配对（从 URL 中检测 ?pair=CODE）
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const urlCode = params.get('pair');
+        if (urlCode && urlCode.length === 4) {
+          fetch('/api/pair', {
+            method: 'POST',
+            headers: { 'x-device-id': deviceId, 'x-device-name': deviceName, 'x-pairing-code': urlCode }
+          }).then(r => {
+            if (!r.ok) throw new Error('Auto-pair failed');
+            paired = true;
+            localStorage.setItem(PAIRED_KEY, '1');
+            hidePairing();
+            toast('配对成功！');
+            loadDirectory();
+            connectWs();
+            renderFriendsPanel();
+            // 清除 URL 中的配对码
+            const url = new URL(window.location.href);
+            url.searchParams.delete('pair');
+            window.history.replaceState({}, '', url);
+          }).catch(() => {
+            showPairing();
+          });
+        } else if (paired) {
+          // 先检查配对状态
+          fetch('/api/pair/check', {
+            headers: { 'x-device-id': deviceId, 'x-device-name': deviceName }
+          }).then(r => r.json()).then(data => {
+            if (data.trusted || !data.require_pairing) {
+              paired = true;
+              localStorage.setItem(PAIRED_KEY, '1');
+              hidePairing();
+              loadDirectory();
+              connectWs();
+              renderFriendsPanel();
+            } else {
+              // 尝试使用已有配对验证一次
+              return api('/api/list?path=&offset=0&limit=1').then(() => {
+                hidePairing();
+                loadDirectory();
+                connectWs();
+                renderFriendsPanel();
+              }).catch(() => {
+                paired = false;
+                localStorage.removeItem(PAIRED_KEY);
+                showPairing();
+              });
+            }
+          }).catch(() => {
+            // /api/pair/check 不可用（旧版本），降级到原有逻辑
+            api('/api/list?path=&offset=0&limit=1').then(() => {
+              hidePairing();
+              loadDirectory();
+              connectWs();
+              renderFriendsPanel();
+            }).catch(() => {
+              paired = false;
+              localStorage.removeItem(PAIRED_KEY);
+              showPairing();
+            });
+          });
+        } else {
+          showPairing();
+        }
+      })();
 
-function showPairing() {
-  document.getElementById('pairing-overlay').style.display = 'flex';
-  hideAllTabs();
-}
+      document.getElementById('pair-submit').addEventListener('click', doPair);
+      document.getElementById('pair-code').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doPair();
+        if (this.value.length >= 4 && e.key !== 'Backspace' && e.key !== 'Delete') {
+          if (e.key.length === 1) e.preventDefault();
+        }
+      });
+      document.getElementById('pair-code').addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        document.getElementById('pair-error').textContent = '';
+      });
 
-function hidePairing() {
-  document.getElementById('pairing-overlay').style.display = 'none';
-  showTab('files');
-}
-
-function hideAllTabs() {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.sidebar-tab').forEach(el => el.classList.remove('active'));
-}
-
-function showTab(name) {
-  hideAllTabs();
-  document.getElementById('tab-' + name).classList.add('active');
-  document.querySelector('.sidebar-tab[data-tab="' + name + '"]').classList.add('active');
-}
-
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
-}
-
-function statusBar(msg, isError) {
-  const el = document.getElementById('status-bar');
-  el.textContent = msg;
-  el.className = 'status-bar show' + (isError ? ' error' : '');
-  setTimeout(() => el.classList.remove('show'), 4000);
-}
-
-function formatSize(bytes) {
-  if (!bytes && bytes !== 0) return '-';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
-  if (bytes < 1073741824) return (bytes/1048576).toFixed(1) + ' MB';
-  return (bytes/1073741824).toFixed(2) + ' GB';
-}
-
-function formatTime(ts) {
-  if (!ts) return '-';
-  const d = new Date(parseInt(ts) * 1000);
-  return d.toLocaleString();
-}
-
-function formatSpeed(speed) {
-  if (!speed || speed === 0) return '-';
-  if (speed < 1024) return speed.toFixed(0) + ' B/s';
-  if (speed < 1048576) return (speed/1024).toFixed(1) + ' KB/s';
-  return (speed/1048576).toFixed(1) + ' MB/s';
-}
-
-// ============== Tab Switching ==============
-
-document.querySelectorAll('.sidebar-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    const name = this.dataset.tab;
-    showTab(name);
-    if (name === 'transfers') { loadTransfers(); stopChatPolling(); }
-    if (name === 'settings') { loadSettings(); stopChatPolling(); }
-    if (name === 'files') { stopChatPolling(); }
-    if (name === 'friends') { loadChatMessages(); startChatPolling(); }
-  });
-});
-
-// ============== Pairing ==============
-
-// 自动配对（从 URL 中检测 ?pair=CODE）
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const urlCode = params.get('pair');
-  if (urlCode && urlCode.length === 4) {
-    fetch('/api/pair', {
-      method: 'POST',
-      headers: { 'x-device-id': deviceId, 'x-device-name': deviceName, 'x-pairing-code': urlCode }
-    }).then(r => {
-      if (!r.ok) throw new Error('Auto-pair failed');
-      paired = true;
-      localStorage.setItem(PAIRED_KEY, '1');
-      hidePairing();
-      toast('配对成功！');
-      loadDirectory();
-      connectWs();
-      renderFriendsPanel();
-      // 清除 URL 中的配对码
-      const url = new URL(window.location.href);
-      url.searchParams.delete('pair');
-      window.history.replaceState({}, '', url);
-    }).catch(() => {
-      showPairing();
-    });
-  } else if (paired) {
-    // 先检查配对状态
-    fetch('/api/pair/check', {
-      headers: { 'x-device-id': deviceId, 'x-device-name': deviceName }
-    }).then(r => r.json()).then(data => {
-      if (data.trusted || !data.require_pairing) {
-        paired = true;
-        localStorage.setItem(PAIRED_KEY, '1');
-        hidePairing();
-        loadDirectory();
-        connectWs();
-        renderFriendsPanel();
-      } else {
-        // 尝试使用已有配对验证一次
-        return api('/api/list?path=&offset=0&limit=1').then(() => {
+      function doPair() {
+        const code = document.getElementById('pair-code').value;
+        if (code.length !== 4) {
+          document.getElementById('pair-error').textContent = '请输入 4 位数字配对码';
+          return;
+        }
+        const btn = document.getElementById('pair-submit');
+        btn.disabled = true;
+        btn.textContent = '配对中...';
+        fetch('/api/pair', {
+          method: 'POST',
+          headers: { 'x-device-id': deviceId, 'x-device-name': deviceName, 'x-pairing-code': code }
+        }).then(r => {
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
+          return r.json();
+        }).then(() => {
+          paired = true;
+          localStorage.setItem(PAIRED_KEY, '1');
           hidePairing();
+          toast('配对成功');
           loadDirectory();
           connectWs();
           renderFriendsPanel();
-        }).catch(() => {
-          paired = false;
-          localStorage.removeItem(PAIRED_KEY);
-          showPairing();
+        }).catch(err => {
+          document.getElementById('pair-error').textContent = err.message;
+        }).finally(() => {
+          btn.disabled = false;
+          btn.textContent = '配对';
         });
       }
-    }).catch(() => {
-      // /api/pair/check 不可用（旧版本），降级到原有逻辑
-      api('/api/list?path=&offset=0&limit=1').then(() => {
-        hidePairing();
-        loadDirectory();
-        connectWs();
+
+      // ============== WebSocket ==============
+
+      function connectWs() {
+        if (ws && ws.readyState === WebSocket.OPEN) return;
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        try {
+          ws = new WebSocket(proto + '//' + location.host + '/ws');
+          ws.onopen = function() {
+            // Register WebSocket with device ID
+            ws.send(JSON.stringify({ type: 'register', device_id: deviceId }));
+            // 连接建立后立即刷新在线状态
+            fetchOnlineStatus();
+          };
+          ws.onmessage = function(event) {
+            try {
+              const msg = JSON.parse(event.data);
+              handleWsMessage(msg);
+            } catch(e) {}
+          };
+          ws.onclose = function() {
+            setTimeout(connectWs, 3000);
+          };
+          ws.onerror = function() {};
+        } catch(e) {
+          setTimeout(connectWs, 5000);
+        }
+      }
+
+      // ============== Chat ==============
+
+      let chatMessages = [];
+      let onlineDevices = [];
+      let deviceNames = {};
+      let selectedFriendId = null;
+      let chatPollTimer = null;
+      let fileDownloads = {};
+
+      function startChatPolling() {
+        if (chatPollTimer) return;
+        chatPollTimer = setInterval(() => {
+          // 兜底轮询：当 WebSocket 实时推送不可用时自动刷新消息
+          loadChatMessages();
+        }, 3000);
+      }
+
+      function stopChatPolling() {
+        if (chatPollTimer) {
+          clearInterval(chatPollTimer);
+          chatPollTimer = null;
+        }
+      }
+
+      // Avatar color helper
+      const AVATAR_COLORS = ['#FF6B6B','#FFA94D','#FFD43B','#69DB7C','#38D9A9','#4DABF7','#748FFC','#DA77F2','#F06595','#FF922B'];
+      function getAvatarColor(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+      }
+      function getInitial(name) { return name.charAt(0).toUpperCase(); }
+      function formatFileSize(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B','KB','MB','GB']; const k=1024; const i=Math.floor(Math.log(bytes)/Math.log(k));
+        return parseFloat((bytes/Math.pow(k,i)).toFixed(1))+' '+units[i];
+      }
+      function getFileIcon(ft) {
+        if (!ft) return '📄';
+        if (ft.startsWith('image/')) return '🖼️';
+        if (ft.startsWith('video/')) return '🎬';
+        if (ft.startsWith('audio/')) return '🎵';
+        if (ft.includes('pdf')) return '📕';
+        if (ft.includes('zip')||ft.includes('rar')) return '📦';
+        return '📄';
+      }
+      function getTime(ts) {
+        try { return new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return ts; }
+      }
+      function getDateKey(ts) {
+        try { const d=new Date(ts); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); } catch(e) { return ts; }
+      }
+      function formatDate(ts) {
+        try {
+          const d=new Date(ts), now=new Date();
+          const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+          const yesterday=new Date(today); yesterday.setDate(yesterday.getDate()-1);
+          if (d>=today) return '今天';
+          if (d>=yesterday) return '昨天';
+          return (d.getMonth()+1)+'月'+d.getDate()+'日';
+        } catch(e) { return ts; }
+      }
+
+      // Friends panel list
+      function renderFriendsPanel() {
+        const container = document.getElementById('friends-panel-list');
+        const countEl = document.getElementById('friends-panel-count');
+        const hintEl = document.getElementById('friends-panel-hint');
+        if (!container) return;
+
+        if (hintEl) hintEl.textContent = onlineDevices.length + ' 台在线';
+
+        // Fetch trusted device list
+        api('/api/pair/trusted').then(r => r.json()).then(devices => {
+          if (!devices || devices.length === 0) {
+            container.innerHTML = '<div style="padding:12px 10px;font-size:11px;color:var(--text-tertiary)">暂无好友</div>';
+            if (countEl) countEl.textContent = '0';
+            return;
+          }
+          if (countEl) countEl.textContent = devices.length;
+          let html = '';
+          for (const d of devices) {
+            const name = d.nickname || d.name || d.id.substring(0, 8);
+            const color = getAvatarColor(name);
+            const initial = getInitial(name);
+            const isOnline = onlineDevices.includes(d.id);
+            const selected = d.id === selectedFriendId ? ' selected' : '';
+            html += '<div class="friends-panel-item' + selected + '" data-id="' + escapeHtml(d.id) + '">';
+            html += '<div class="friends-panel-avatar" style="background:' + color + '">' + initial + '</div>';
+            html += '<div class="friends-panel-info">';
+            html += '<div class="friends-panel-name">' + escapeHtml(name) + '</div>';
+            html += '<div class="friends-panel-status">' + (isOnline ? '在线' : '离线') + '</div>';
+            html += '</div>';
+            html += '<div class="friends-panel-dot ' + (isOnline ? 'online' : 'offline') + '"></div>';
+            html += '</div>';
+          }
+          container.innerHTML = html;
+          // Bind click handlers for friend selection
+          container.querySelectorAll('.friends-panel-item').forEach(el => {
+            el.addEventListener('click', function() {
+              const id = this.dataset.id;
+              selectFriend(id);
+            });
+          });
+        }).catch(() => {
+          if (container) container.innerHTML = '<div style="padding:12px 10px;font-size:11px;color:var(--text-tertiary)">暂无好友</div>';
+        });
+      }
+
+      // Select a friend in the friends panel
+      function selectFriend(friendId) {
+        selectedFriendId = friendId;
         renderFriendsPanel();
-      }).catch(() => {
-        paired = false;
-        localStorage.removeItem(PAIRED_KEY);
-        showPairing();
-      });
-    });
-  } else {
-    showPairing();
-  }
-})();
 
-document.getElementById('pair-submit').addEventListener('click', doPair);
-document.getElementById('pair-code').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doPair();
-  if (this.value.length >= 4 && e.key !== 'Backspace' && e.key !== 'Delete') {
-    if (e.key.length === 1) e.preventDefault();
-  }
-});
-document.getElementById('pair-code').addEventListener('input', function() {
-  this.value = this.value.replace(/\D/g, '').slice(0, 4);
-  document.getElementById('pair-error').textContent = '';
-});
+        const header = document.querySelector('.chat-w-header h3');
+        const inputArea = document.querySelector('.chat-w-input-area');
 
-function doPair() {
-  const code = document.getElementById('pair-code').value;
-  if (code.length !== 4) {
-    document.getElementById('pair-error').textContent = '请输入 4 位数字配对码';
-    return;
-  }
-  const btn = document.getElementById('pair-submit');
-  btn.disabled = true;
-  btn.textContent = '配对中...';
-  fetch('/api/pair', {
-    method: 'POST',
-    headers: { 'x-device-id': deviceId, 'x-device-name': deviceName, 'x-pairing-code': code }
-  }).then(r => {
-    if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
-    return r.json();
-  }).then(() => {
-    paired = true;
-    localStorage.setItem(PAIRED_KEY, '1');
-    hidePairing();
-    toast('配对成功');
-    loadDirectory();
-    connectWs();
-    renderFriendsPanel();
-  }).catch(err => {
-    document.getElementById('pair-error').textContent = err.message;
-  }).finally(() => {
-    btn.disabled = false;
-    btn.textContent = '配对';
-  });
-}
+        if (friendId) {
+          // Show input area
+          if (inputArea) inputArea.style.display = 'flex';
 
-// ============== WebSocket ==============
+          // Update chat header with selected friend name
+          api('/api/pair/trusted').then(r => r.json()).then(devices => {
+            const friend = devices.find(d => d.id === friendId);
+            if (friend) {
+              const name = friend.nickname || friend.name || friendId.substring(0, 8);
+              const color = getAvatarColor(name);
+              const initial = getInitial(name);
+              if (header) {
+                header.innerHTML = '<span class="chat-w-avatar" style="display:inline-flex;width:24px;height:24px;font-size:10px;background:' + color + ';color:#fff;border-radius:50%;align-items:center;justify-content:center;margin-right:6px;vertical-align:middle">' + initial + '</span>' + escapeHtml(name);
+              }
+            }
+          }).catch(() => {});
 
-function connectWs() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  try {
-    ws = new WebSocket(proto + '//' + location.host + '/ws');
-    ws.onopen = function() {
-      // Register WebSocket with device ID
-      ws.send(JSON.stringify({ type: 'register', device_id: deviceId }));
-    };
-    ws.onmessage = function(event) {
-      try {
-        const msg = JSON.parse(event.data);
-        handleWsMessage(msg);
-      } catch(e) {}
-    };
-    ws.onclose = function() {
-      setTimeout(connectWs, 3000);
-    };
-    ws.onerror = function() {};
-  } catch(e) {
-    setTimeout(connectWs, 5000);
-  }
-}
+          loadChatMessages();
+        } else {
+          // Hide input area
+          if (inputArea) inputArea.style.display = 'none';
+          if (header) header.textContent = '聊天';
 
-// ============== Chat ==============
-
-let chatMessages = [];
-let onlineDevices = [];
-let deviceNames = {};
-let selectedFriendId = null;
-let chatPollTimer = null;
-let fileDownloads = {};
-
-function startChatPolling() {
-  if (chatPollTimer) return;
-  chatPollTimer = setInterval(() => {
-    // 兜底轮询：当 WebSocket 实时推送不可用时自动刷新消息
-    loadChatMessages();
-  }, 3000);
-}
-
-function stopChatPolling() {
-  if (chatPollTimer) {
-    clearInterval(chatPollTimer);
-    chatPollTimer = null;
-  }
-}
-
-// Avatar color helper
-const AVATAR_COLORS = ['#FF6B6B','#FFA94D','#FFD43B','#69DB7C','#38D9A9','#4DABF7','#748FFC','#DA77F2','#F06595','#FF922B'];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function getInitial(name) { return name.charAt(0).toUpperCase(); }
-function formatFileSize(bytes) {
-  if (!bytes) return '0 B';
-  const units = ['B','KB','MB','GB']; const k=1024; const i=Math.floor(Math.log(bytes)/Math.log(k));
-  return parseFloat((bytes/Math.pow(k,i)).toFixed(1))+' '+units[i];
-}
-function getFileIcon(ft) {
-  if (!ft) return '📄';
-  if (ft.startsWith('image/')) return '🖼️';
-  if (ft.startsWith('video/')) return '🎬';
-  if (ft.startsWith('audio/')) return '🎵';
-  if (ft.includes('pdf')) return '📕';
-  if (ft.includes('zip')||ft.includes('rar')) return '📦';
-  return '📄';
-}
-function getTime(ts) {
-  try { return new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return ts; }
-}
-function getDateKey(ts) {
-  try { const d=new Date(ts); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); } catch(e) { return ts; }
-}
-function formatDate(ts) {
-  try {
-    const d=new Date(ts), now=new Date();
-    const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-    const yesterday=new Date(today); yesterday.setDate(yesterday.getDate()-1);
-    if (d>=today) return '今天';
-    if (d>=yesterday) return '昨天';
-    return (d.getMonth()+1)+'月'+d.getDate()+'日';
-  } catch(e) { return ts; }
-}
-
-// Friends panel list
-function renderFriendsPanel() {
-  const container = document.getElementById('friends-panel-list');
-  const countEl = document.getElementById('friends-panel-count');
-  const hintEl = document.getElementById('friends-panel-hint');
-  if (!container) return;
-
-  if (hintEl) hintEl.textContent = onlineDevices.length + ' 台在线';
-
-  // Fetch trusted device list
-  api('/api/pair/trusted').then(r => r.json()).then(devices => {
-    if (!devices || devices.length === 0) {
-      container.innerHTML = '<div style="padding:12px 10px;font-size:11px;color:var(--text-tertiary)">暂无好友</div>';
-      if (countEl) countEl.textContent = '0';
-      return;
-    }
-    if (countEl) countEl.textContent = devices.length;
-    let html = '';
-    for (const d of devices) {
-      const name = d.nickname || d.name || d.id.substring(0, 8);
-      const color = getAvatarColor(name);
-      const initial = getInitial(name);
-      const isOnline = onlineDevices.includes(d.id);
-      const selected = d.id === selectedFriendId ? ' selected' : '';
-      html += '<div class="friends-panel-item' + selected + '" data-id="' + escapeHtml(d.id) + '">';
-      html += '<div class="friends-panel-avatar" style="background:' + color + '">' + initial + '</div>';
-      html += '<div class="friends-panel-info">';
-      html += '<div class="friends-panel-name">' + escapeHtml(name) + '</div>';
-      html += '<div class="friends-panel-status">' + (isOnline ? '在线' : '离线') + '</div>';
-      html += '</div>';
-      html += '<div class="friends-panel-dot ' + (isOnline ? 'online' : 'offline') + '"></div>';
-      html += '</div>';
-    }
-    container.innerHTML = html;
-    // Bind click handlers for friend selection
-    container.querySelectorAll('.friends-panel-item').forEach(el => {
-      el.addEventListener('click', function() {
-        const id = this.dataset.id;
-        selectFriend(id);
-      });
-    });
-  }).catch(() => {
-    if (container) container.innerHTML = '<div style="padding:12px 10px;font-size:11px;color:var(--text-tertiary)">暂无好友</div>';
-  });
-}
-
-// Select a friend in the friends panel
-function selectFriend(friendId) {
-  selectedFriendId = friendId;
-  renderFriendsPanel();
-
-  const header = document.querySelector('.chat-w-header h3');
-  const inputArea = document.querySelector('.chat-w-input-area');
-
-  if (friendId) {
-    // Show input area
-    if (inputArea) inputArea.style.display = 'flex';
-
-    // Update chat header with selected friend name
-    api('/api/pair/trusted').then(r => r.json()).then(devices => {
-      const friend = devices.find(d => d.id === friendId);
-      if (friend) {
-        const name = friend.nickname || friend.name || friendId.substring(0, 8);
-        const color = getAvatarColor(name);
-        const initial = getInitial(name);
-        if (header) {
-          header.innerHTML = '<span class="chat-w-avatar" style="display:inline-flex;width:24px;height:24px;font-size:10px;background:' + color + ';color:#fff;border-radius:50%;align-items:center;justify-content:center;margin-right:6px;vertical-align:middle">' + initial + '</span>' + escapeHtml(name);
+          const container = document.getElementById('chat-messages');
+          if (container) {
+            container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary);margin-bottom:4px">请选择好友开始聊天</p><p style="font-size:12px;color:var(--text-tertiary)">从左侧列表选择一个好友</p></div>';
+          }
         }
       }
-    }).catch(() => {});
 
-    loadChatMessages();
-  } else {
-    // Hide input area
-    if (inputArea) inputArea.style.display = 'none';
-    if (header) header.textContent = '聊天';
-
-    const container = document.getElementById('chat-messages');
-    if (container) {
-      container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary);margin-bottom:4px">请选择好友开始聊天</p><p style="font-size:12px;color:var(--text-tertiary)">从左侧列表选择一个好友</p></div>';
-    }
-  }
-}
-
-function loadChatMessages() {
-  api('/api/chat/messages').then(r => r.json()).then(data => {
-    chatMessages = data || [];
-    renderChatMessages();
-  }).catch(() => {});
-}
-
-function getFriendMessages() {
-  if (!selectedFriendId) return [];
-  return chatMessages.filter(msg => msg.from_id === selectedFriendId || msg.to_id === selectedFriendId);
-}
-
-function renderChatMessages() {
-  const container = document.getElementById('chat-messages');
-  if (!selectedFriendId) {
-    container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary);margin-bottom:4px">请选择好友开始聊天</p><p style="font-size:12px;color:var(--text-tertiary)">从左侧列表选择一个好友</p></div>';
-    return;
-  }
-
-  const filtered = getFriendMessages();
-  if (filtered.length === 0) {
-    container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary)">暂无消息</p><p style="font-size:12px;color:var(--text-tertiary)">发送第一条消息开始聊天</p></div>';
-    return;
-  }
-
-  // Group by date
-  let groups = [];
-  let currentKey = null;
-  let currentGroup = null;
-  for (const msg of filtered) {
-    const key = getDateKey(msg.timestamp);
-    if (key !== currentKey) {
-      currentKey = key;
-      currentGroup = { dateKey: key, messages: [] };
-      groups.push(currentGroup);
-    }
-    currentGroup.messages.push(msg);
-  }
-
-  let html = '';
-  for (const group of groups) {
-    html += '<div class="chat-date-group">';
-    html += '<div class="chat-date-sep"><span>' + formatDate(group.messages[0].timestamp) + '</span></div>';
-
-    for (const msg of group.messages) {
-      const isSelf = msg.from_id === deviceId;
-      const displayName = deviceNames[msg.from_id] || msg.from_name;
-      const time = getTime(msg.timestamp);
-      const color = getAvatarColor(displayName);
-      const initial = getInitial(displayName);
-
-      html += '<div class="chat-w-msg ' + (isSelf ? 'self' : 'other') + '">';
-
-      html += '<div class="chat-w-avatar" style="background:' + color + '">' + initial + '</div>';
-
-      html += '<div class="chat-w-body">';
-      html += '<div class="chat-w-sender">' + escapeHtml(displayName) + '</div>';
-
-      const msgType = msg.message_type || 'text';
-
-      // Text message
-      if (msgType === 'text') {
-        html += '<div class="chat-w-bubble">' + escapeHtml(msg.text) + '</div>';
+      function loadChatMessages() {
+        api('/api/chat/messages').then(r => r.json()).then(data => {
+          chatMessages = data || [];
+          renderChatMessages();
+        }).catch(() => {});
       }
 
-      // File message
-      if (msgType === 'file' && msg.file_name) {
-        const dl = fileDownloads[msg.file_id] || {};
-        const isDone = dl.status === 'done';
-        const isDl = dl.status === 'downloading';
-        html += '<div class="file-w-card' + (isDone ? ' file-w-done' : '') + '" data-file-id="' + String(msg.file_id).replace(/"/g,'&quot;') + '" data-file-name="' + String(msg.file_name).replace(/"/g,'&quot;') + '">';
-        html += '<span class="file-w-icon">' + getFileIcon(msg.file_type) + '</span>';
-        html += '<div class="file-w-info"><div class="file-w-name">' + escapeHtml(msg.file_name) + '</div>';
-        if (msg.file_size != null) {
-          html += '<div class="file-w-size">' + (isDl ? '下载中...' : isDone ? '已下载 · 点击打开' : formatFileSize(msg.file_size)) + '</div>';
+      function getFriendMessages() {
+        if (!selectedFriendId) return [];
+        return chatMessages.filter(msg => msg.from_id === selectedFriendId || msg.to_id === selectedFriendId);
+      }
+
+      function renderChatMessages() {
+        const container = document.getElementById('chat-messages');
+        if (!selectedFriendId) {
+          container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary);margin-bottom:4px">请选择好友开始聊天</p><p style="font-size:12px;color:var(--text-tertiary)">从左侧列表选择一个好友</p></div>';
+          return;
         }
-        html += '</div><span class="file-w-dl">' + (isDone ? '📂' : isDl ? '⏳' : '⬇️') + '</span>';
-        if (isDl) html += '<div class="file-w-progress"><div class="file-w-progress-bar"></div></div>';
-        html += '</div>';
+
+        const filtered = getFriendMessages();
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="chat-empty"><p style="font-size:14px;color:var(--text-tertiary)">暂无消息</p><p style="font-size:12px;color:var(--text-tertiary)">发送第一条消息开始聊天</p></div>';
+          return;
+        }
+
+        // Group by date
+        let groups = [];
+        let currentKey = null;
+        let currentGroup = null;
+        for (const msg of filtered) {
+          const key = getDateKey(msg.timestamp);
+          if (key !== currentKey) {
+            currentKey = key;
+            currentGroup = { dateKey: key, messages: [] };
+            groups.push(currentGroup);
+          }
+          currentGroup.messages.push(msg);
+        }
+
+        let html = '';
+        for (const group of groups) {
+          html += '<div class="chat-date-group">';
+          html += '<div class="chat-date-sep"><span>' + formatDate(group.messages[0].timestamp) + '</span></div>';
+
+          for (const msg of group.messages) {
+            const isSelf = msg.from_id === deviceId;
+            const displayName = deviceNames[msg.from_id] || msg.from_name;
+            const time = getTime(msg.timestamp);
+            const color = getAvatarColor(displayName);
+            const initial = getInitial(displayName);
+
+            html += '<div class="chat-w-msg ' + (isSelf ? 'self' : 'other') + '">';
+
+            html += '<div class="chat-w-avatar" style="background:' + color + '">' + initial + '</div>';
+
+            html += '<div class="chat-w-body">';
+            html += '<div class="chat-w-sender">' + escapeHtml(displayName) + '</div>';
+
+            const msgType = msg.message_type || 'text';
+
+            // Text message
+            if (msgType === 'text') {
+              html += '<div class="chat-w-bubble">' + escapeHtml(msg.text) + '</div>';
+            }
+
+            // File message
+            if (msgType === 'file' && msg.file_name) {
+              const dl = fileDownloads[msg.file_id] || {};
+              const isDone = dl.status === 'done';
+              const isDl = dl.status === 'downloading';
+              html += '<div class="file-w-card' + (isDone ? ' file-w-done' : '') + '" data-file-id="' + String(msg.file_id).replace(/"/g,'&quot;') + '" data-file-name="' + String(msg.file_name).replace(/"/g,'&quot;') + '">';
+              html += '<span class="file-w-icon">' + getFileIcon(msg.file_type) + '</span>';
+              html += '<div class="file-w-info"><div class="file-w-name">' + escapeHtml(msg.file_name) + '</div>';
+              if (msg.file_size != null) {
+                html += '<div class="file-w-size">' + (isDl ? '下载中...' : isDone ? '已下载 · 点击打开' : formatFileSize(msg.file_size)) + '</div>';
+              }
+              html += '</div><span class="file-w-dl">' + (isDone ? '📂' : isDl ? '⏳' : '⬇️') + '</span>';
+              if (isDl) html += '<div class="file-w-progress"><div class="file-w-progress-bar"></div></div>';
+              html += '</div>';
+            }
+
+            // Image message
+            if (msgType === 'image' && msg.file_id) {
+              html += '<div class="img-w-thumb" onclick="previewChatImage(\'' + escapeHtml(msg.file_id) + '\')">';
+              html += '<img src="/api/chat/download/' + encodeURIComponent(msg.file_id) + '" alt="' + escapeHtml(msg.file_name||'') + '" loading="lazy">';
+              html += '</div>';
+            }
+
+            html += '<div class="chat-w-time">' + escapeHtml(time) + '</div>';
+            html += '</div></div>';
+          }
+
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+        // Bind file card events: 单击下载，双击打开已下载
+        container.querySelectorAll('.file-w-card').forEach(el => {
+          el.addEventListener('click', function(e) {
+            const fileId = this.dataset.fileId;
+            const dl = fileDownloads[fileId];
+            if (dl && dl.status === 'done') return; // 已下载的文件忽略单击
+            if (!fileId) return;
+            startFileDownload(fileId, this.dataset.fileName);
+          });
+          el.addEventListener('dblclick', function(e) {
+            const fileId = this.dataset.fileId;
+            const dl = fileDownloads[fileId];
+            if (dl && dl.status === 'done') {
+              window.open('/api/chat/download/' + encodeURIComponent(fileId), '_blank');
+            }
+          });
+        });
+        container.scrollTop = container.scrollHeight;
       }
 
-      // Image message
-      if (msgType === 'image' && msg.file_id) {
-        html += '<div class="img-w-thumb" onclick="previewChatImage(\'' + escapeHtml(msg.file_id) + '\')">';
-        html += '<img src="/api/chat/download/' + encodeURIComponent(msg.file_id) + '" alt="' + escapeHtml(msg.file_name||'') + '" loading="lazy">';
-        html += '</div>';
+      function sendChatMessage(text) {
+        if (!text.trim() || !selectedFriendId) return;
+        const body = { text: text.trim(), to_id: selectedFriendId };
+        api('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId, 'x-device-name': deviceName },
+          body: JSON.stringify(body)
+        }).then(r => r.json()).then(() => {
+          document.getElementById('chat-input').value = '';
+          loadChatMessages();
+        }).catch(err => {
+          toast('发送失败: ' + err.message);
+        });
       }
 
-      html += '<div class="chat-w-time">' + escapeHtml(time) + '</div>';
-      html += '</div></div>';
-    }
-
-    html += '</div>';
-  }
-
-  container.innerHTML = html;
-  // Bind file card events: 单击下载，双击打开已下载
-  container.querySelectorAll('.file-w-card').forEach(el => {
-    el.addEventListener('click', function(e) {
-      const fileId = this.dataset.fileId;
-      const dl = fileDownloads[fileId];
-      if (dl && dl.status === 'done') return; // 已下载的文件忽略单击
-      if (!fileId) return;
-      startFileDownload(fileId, this.dataset.fileName);
-    });
-    el.addEventListener('dblclick', function(e) {
-      const fileId = this.dataset.fileId;
-      const dl = fileDownloads[fileId];
-      if (dl && dl.status === 'done') {
-        window.open('/api/chat/download/' + encodeURIComponent(fileId), '_blank');
+      function uploadChatFile(file) {
+        if (!file || !selectedFriendId) return;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fetch('/api/chat/upload?name=' + encodeURIComponent(file.name) + '&device_id=' + encodeURIComponent(deviceId) + '&device_name=' + encodeURIComponent(deviceName) + '&file_type=' + encodeURIComponent(file.type || 'application/octet-stream') + '&to_id=' + encodeURIComponent(selectedFriendId), {
+          method: 'POST',
+          headers: { 'x-device-id': deviceId, 'x-device-name': deviceName },
+          body: file
+        }).then(r => {
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
+          return r.json();
+        }).then(() => {
+          toast('已发送文件: ' + file.name);
+          loadChatMessages();
+        }).catch(err => {
+          toast('发送文件失败: ' + err.message);
+        });
       }
-    });
-  });
-  container.scrollTop = container.scrollHeight;
-}
 
-function sendChatMessage(text) {
-  if (!text.trim() || !selectedFriendId) return;
-  const body = { text: text.trim(), to_id: selectedFriendId };
-  api('/api/chat/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId, 'x-device-name': deviceName },
-    body: JSON.stringify(body)
-  }).then(r => r.json()).then(() => {
-    document.getElementById('chat-input').value = '';
-    loadChatMessages();
-  }).catch(err => {
-    toast('发送失败: ' + err.message);
-  });
-}
-
-function uploadChatFile(file) {
-  if (!file || !selectedFriendId) return;
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  fetch('/api/chat/upload?name=' + encodeURIComponent(file.name) + '&device_id=' + encodeURIComponent(deviceId) + '&device_name=' + encodeURIComponent(deviceName) + '&file_type=' + encodeURIComponent(file.type || 'application/octet-stream') + '&to_id=' + encodeURIComponent(selectedFriendId), {
-    method: 'POST',
-    headers: { 'x-device-id': deviceId, 'x-device-name': deviceName },
-    body: file
-  }).then(r => {
-    if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
-    return r.json();
-  }).then(() => {
-    toast('已发送文件: ' + file.name);
-    loadChatMessages();
-  }).catch(err => {
-    toast('发送文件失败: ' + err.message);
-  });
-}
-
-function startFileDownload(fileId, fileName) {
-  if (!fileId) return;
-  const dl = fileDownloads[fileId];
-  if (dl && dl.status === 'downloading') return;
-  if (dl && dl.status === 'done') return; // 已下载的由 dblclick 处理
-  fileDownloads[fileId] = { status: 'downloading' };
-  renderChatMessages();
-  // 通过隐藏的 a 标签触发下载
-  const a = document.createElement('a');
-  a.href = '/api/chat/download/' + encodeURIComponent(fileId);
-  a.download = fileName || 'file';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  // 标记为已下载
-  setTimeout(() => {
-    fileDownloads[fileId] = { status: 'done' };
-    renderChatMessages();
-  }, 500);
-}
-
-function previewChatImage(fileId) {
-  if (!fileId) return;
-  document.getElementById('image-preview-img').src = '/api/chat/download/' + encodeURIComponent(fileId);
-  document.getElementById('image-preview-modal').style.display = 'flex';
-}
-
-function handleWsMessage(msg) {
-  if (!msg.type) return;
-  switch (msg.type) {
-    case 'TransferProgress':
-    case 'TransferComplete':
-    case 'TransferError':
-      updateTransferItem(msg);
-      break;
-    case 'DeviceStatus':
-      const ds = msg.data || {};
-      if (ds.online) {
-        if (!onlineDevices.includes(ds.device_id)) onlineDevices.push(ds.device_id);
-      } else {
-        onlineDevices = onlineDevices.filter(id => id !== ds.device_id);
-      }
-      renderFriendsPanel();
-      break;
-    case 'ChatMessage':
-      const d = msg.data || {};
-      chatMessages.push({
-        from_id: d.from_id,
-        from_name: d.from_name,
-        text: d.text,
-        timestamp: d.timestamp,
-        message_type: d.message_type || 'text',
-        file_name: d.file_name,
-        file_size: d.file_size,
-        file_id: d.file_id,
-        file_type: d.file_type,
-        to_id: d.to_id,
-      });
-      if (chatMessages.length > 200) chatMessages.shift();
-      // Track device names
-      if (d.from_name) deviceNames[d.from_id] = d.from_name;
-      // Only re-render if currently viewing this friend's chat or it's our own message
-      if (!selectedFriendId || d.from_id === selectedFriendId || d.to_id === selectedFriendId) {
+      function startFileDownload(fileId, fileName) {
+        if (!fileId) return;
+        const dl = fileDownloads[fileId];
+        if (dl && dl.status === 'downloading') return;
+        if (dl && dl.status === 'done') return; // 已下载的由 dblclick 处理
+        fileDownloads[fileId] = { status: 'downloading' };
         renderChatMessages();
+        // 通过隐藏的 a 标签触发下载
+        const a = document.createElement('a');
+        a.href = '/api/chat/download/' + encodeURIComponent(fileId);
+        a.download = fileName || 'file';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // 标记为已下载
+        setTimeout(() => {
+          fileDownloads[fileId] = { status: 'done' };
+          renderChatMessages();
+        }, 500);
       }
-      break;
-  }
-}
 
-function updateTransferItem(msg) {
-  const data = msg.data || {};
-  const idx = transfers.findIndex(t => t.id === data.id);
-  if (idx === -1) return;
+      function previewChatImage(fileId) {
+        if (!fileId) return;
+        document.getElementById('image-preview-img').src = '/api/chat/download/' + encodeURIComponent(fileId);
+        document.getElementById('image-preview-modal').style.display = 'flex';
+      }
 
-  if (msg.type === 'TransferProgress') {
-    transfers[idx].bytes_transferred = data.bytes_transferred || 0;
-    transfers[idx].speed = data.speed || 0;
-    transfers[idx].status = 'Transferring';
-  } else if (msg.type === 'TransferComplete') {
-    transfers[idx].status = 'Completed';
-    transfers[idx].bytes_transferred = transfers[idx].file_size;
-  } else if (msg.type === 'TransferError') {
-    transfers[idx].status = 'Failed';
-    transfers[idx].error = data.error || '传输错误';
-  }
+      function handleWsMessage(msg) {
+        if (!msg.type) return;
+        switch (msg.type) {
+          case 'TransferProgress':
+          case 'TransferComplete':
+          case 'TransferError':
+            updateTransferItem(msg);
+            break;
+          case 'DeviceStatus':
+            const ds = msg.data || {};
+            if (ds.online) {
+              if (!onlineDevices.includes(ds.device_id)) onlineDevices.push(ds.device_id);
+            } else {
+              onlineDevices = onlineDevices.filter(id => id !== ds.device_id);
+            }
+            renderFriendsPanel();
+            break;
+          case 'ChatMessage':
+            const d = msg.data || {};
+            chatMessages.push({
+              from_id: d.from_id,
+              from_name: d.from_name,
+              text: d.text,
+              timestamp: d.timestamp,
+              message_type: d.message_type || 'text',
+              file_name: d.file_name,
+              file_size: d.file_size,
+              file_id: d.file_id,
+              file_type: d.file_type,
+              to_id: d.to_id,
+            });
+            if (chatMessages.length > 200) chatMessages.shift();
+            // Track device names
+            if (d.from_name) deviceNames[d.from_id] = d.from_name;
+            // Only re-render if currently viewing this friend's chat or it's our own message
+            if (!selectedFriendId || d.from_id === selectedFriendId || d.to_id === selectedFriendId) {
+              renderChatMessages();
+            }
+            break;
+        }
+      }
 
-  renderTransferList();
-}
+      function updateTransferItem(msg) {
+        const data = msg.data || {};
+        const idx = transfers.findIndex(t => t.id === data.id);
+        if (idx === -1) return;
 
-// ============== File Browser ==============
+        if (msg.type === 'TransferProgress') {
+          transfers[idx].bytes_transferred = data.bytes_transferred || 0;
+          transfers[idx].speed = data.speed || 0;
+          transfers[idx].status = 'Transferring';
+        } else if (msg.type === 'TransferComplete') {
+          transfers[idx].status = 'Completed';
+          transfers[idx].bytes_transferred = transfers[idx].file_size;
+        } else if (msg.type === 'TransferError') {
+          transfers[idx].status = 'Failed';
+          transfers[idx].error = data.error || '传输错误';
+        }
 
-function loadDirectory() {
-  offset = 0;
-  hasMore = true;
-  entries = [];
-  selected = new Set();
-  updateBatchBar();
-  renderBreadcrumb();
-  fetchFiles(true);
-}
+        renderTransferList();
+      }
 
-function fetchFiles(replace) {
-  if (loading || !hasMore) return;
-  loading = true;
+      // ============== File Browser ==============
 
-  const params = new URLSearchParams();
-  params.set('path', currentPath);
-  params.set('offset', offset);
-  params.set('limit', PAGE_SIZE);
+      function loadDirectory() {
+        offset = 0;
+        hasMore = true;
+        entries = [];
+        selected = new Set();
+        updateBatchBar();
+        renderBreadcrumb();
+        fetchFiles(true);
+      }
 
-  if (replace) {
-    document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner"></span>加载中...</td></tr>';
-  }
+      function fetchFiles(replace) {
+        if (loading || !hasMore) return;
+        loading = true;
 
-  api('/api/list?' + params.toString()).then(r => r.json()).then(data => {
-    loading = false;
-    document.getElementById('loading-more').style.display = 'none';
-    if (replace) entries = data;
-    else entries = entries.concat(data);
-    offset = entries.length;
-    hasMore = data.length >= PAGE_SIZE;
-    renderFiles();
-  }).catch(err => {
-    loading = false;
-    document.getElementById('loading-more').style.display = 'none';
-    if (replace) document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">加载失败: ' + err.message + '</td></tr>';
-    statusBar('加载失败: ' + err.message, true);
-  });
-}
+        const params = new URLSearchParams();
+        params.set('path', currentPath);
+        params.set('offset', offset);
+        params.set('limit', PAGE_SIZE);
 
-function renderFiles() {
-  const tbody = document.getElementById('file-list');
-  if (entries.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">目录为空</td></tr>';
-    return;
-  }
-  let html = '';
-  for (const e of entries) {
-    const checked = selected.has(e.name) ? 'checked' : '';
-    const icon = e.is_dir ? '📁' : (() => {
-      const ext = (e.name.split('.').pop() || '').toLowerCase();
-      if (['jpg','jpeg','png','gif','bmp','webp','svg','ico'].includes(ext)) return '🖼️';
-      if (['mp4','mkv','avi','mov','wmv','flv','webm'].includes(ext)) return '🎬';
-      if (['mp3','wav','flac','aac','ogg','wma','m4a'].includes(ext)) return '🎵';
-      if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) return '🗜️';
-      if (['pdf'].includes(ext)) return '📕';
-      if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) return '📊';
-      if (['txt','md','log','html','css','js','ts','tsx','jsx','json','xml','yaml','yml','toml','rs','py','go','java','c','cpp','h','hpp','rb','php'].includes(ext)) return '💻';
-      return '📄';
-    })();
-    html += '<tr class="' + (e.is_dir ? 'dir' : '') + '" data-name="' + e.name.replace(/"/g,'&quot;') + '">';
-    html += '<td><input type="checkbox" ' + checked + ' data-name="' + e.name.replace(/"/g,'&quot;') + '"></td>';
-    html += '<td class="name"><span class="icon">' + icon + '</span><a data-name="' + e.name.replace(/"/g,'&quot;') + '">' + e.name + '</a></td>';
-    html += '<td class="size">' + formatSize(e.size) + '</td>';
-    html += '<td class="time">' + formatTime(e.modified_at) + '</td>';
-    html += '<td>' + (e.is_dir ? '' : '<button class="pair-btn" data-dl="' + e.name.replace(/"/g,'&quot;') + '" style="padding:2px 8px;font-size:11px">下载</button>') + '</td>';
-    html += '</tr>';
-  }
-  tbody.innerHTML = html;
+        if (replace) {
+          document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner"></span>加载中...</td></tr>';
+        }
 
-  tbody.querySelectorAll('tr.dir').forEach(tr => {
-    tr.addEventListener('click', function(e) {
-      if (e.target.type === 'checkbox') return;
-      const name = this.dataset.name;
-      currentPath = currentPath ? currentPath + '/' + name : name;
-      loadDirectory();
-    });
-  });
-  tbody.querySelectorAll('td.name a').forEach(a => {
-    a.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const name = this.dataset.name;
-      const entry = entries.find(x => x.name === name);
-      if (entry && entry.is_dir) {
-        currentPath = currentPath ? currentPath + '/' + name : name;
+        api('/api/list?' + params.toString()).then(r => r.json()).then(data => {
+          loading = false;
+          document.getElementById('loading-more').style.display = 'none';
+          if (replace) entries = data;
+          else entries = entries.concat(data);
+          offset = entries.length;
+          hasMore = data.length >= PAGE_SIZE;
+          renderFiles();
+        }).catch(err => {
+          loading = false;
+          document.getElementById('loading-more').style.display = 'none';
+          if (replace) document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">加载失败: ' + err.message + '</td></tr>';
+          statusBar('加载失败: ' + err.message, true);
+        });
+      }
+
+      function renderFiles() {
+        const tbody = document.getElementById('file-list');
+        if (entries.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty">目录为空</td></tr>';
+          return;
+        }
+        let html = '';
+        for (const e of entries) {
+          const checked = selected.has(e.name) ? 'checked' : '';
+          const icon = e.is_dir ? '📁' : (() => {
+            const ext = (e.name.split('.').pop() || '').toLowerCase();
+            if (['jpg','jpeg','png','gif','bmp','webp','svg','ico'].includes(ext)) return '🖼️';
+            if (['mp4','mkv','avi','mov','wmv','flv','webm'].includes(ext)) return '🎬';
+            if (['mp3','wav','flac','aac','ogg','wma','m4a'].includes(ext)) return '🎵';
+            if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) return '🗜️';
+            if (['pdf'].includes(ext)) return '📕';
+            if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) return '📊';
+            if (['txt','md','log','html','css','js','ts','tsx','jsx','json','xml','yaml','yml','toml','rs','py','go','java','c','cpp','h','hpp','rb','php'].includes(ext)) return '💻';
+            return '📄';
+          })();
+          html += '<tr class="' + (e.is_dir ? 'dir' : '') + '" data-name="' + e.name.replace(/"/g,'&quot;') + '">';
+          html += '<td><input type="checkbox" ' + checked + ' data-name="' + e.name.replace(/"/g,'&quot;') + '"></td>';
+          html += '<td class="name"><span class="icon">' + icon + '</span><a data-name="' + e.name.replace(/"/g,'&quot;') + '">' + e.name + '</a></td>';
+          html += '<td class="size">' + formatSize(e.size) + '</td>';
+          html += '<td class="time">' + formatTime(e.modified_at) + '</td>';
+          html += '<td>' + (e.is_dir ? '' : '<button class="pair-btn" data-dl="' + e.name.replace(/"/g,'&quot;') + '" style="padding:2px 8px;font-size:11px">下载</button>') + '</td>';
+          html += '</tr>';
+        }
+        tbody.innerHTML = html;
+
+        tbody.querySelectorAll('tr.dir').forEach(tr => {
+          tr.addEventListener('click', function(e) {
+            if (e.target.type === 'checkbox') return;
+            const name = this.dataset.name;
+            currentPath = currentPath ? currentPath + '/' + name : name;
+            loadDirectory();
+          });
+        });
+        tbody.querySelectorAll('td.name a').forEach(a => {
+          a.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const name = this.dataset.name;
+            const entry = entries.find(x => x.name === name);
+            if (entry && entry.is_dir) {
+              currentPath = currentPath ? currentPath + '/' + name : name;
+              loadDirectory();
+            }
+          });
+        });
+        tbody.querySelectorAll('[data-dl]').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            downloadFile(this.dataset.dl);
+          });
+        });
+        tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', function() {
+            if (this.checked) selected.add(this.dataset.name);
+            else selected.delete(this.dataset.name);
+            updateBatchBar();
+          });
+        });
+
+        document.getElementById('select-all').checked = false;
+      }
+
+      function renderBreadcrumb() {
+        const el = document.getElementById('breadcrumb');
+        if (!currentPath) {
+          el.innerHTML = '<a href="#" data-path="">根目录</a>';
+        } else {
+          const parts = currentPath.split('/');
+          let html = '<a href="#" data-path="">根目录</a>';
+          let acc = '';
+          for (const p of parts) {
+            acc = acc ? acc + '/' + p : p;
+            html += ' / <a href="#" data-path="' + acc + '">' + p + '</a>';
+          }
+          el.innerHTML = html;
+        }
+        el.querySelectorAll('a').forEach(a => {
+          a.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPath = this.dataset.path;
+            loadDirectory();
+          });
+        });
+      }
+
+      function downloadFile(name) {
+        const filePath = currentPath ? currentPath + '/' + name : name;
+        statusBar('正在下载: ' + name);
+        api('/api/download?path=' + encodeURIComponent(filePath)).then(r => r.blob()).then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          toast('下载完成: ' + name);
+        }).catch(err => {
+          statusBar('下载失败: ' + err.message, true);
+        });
+      }
+
+      // Upload
+      document.getElementById('btn-upload').addEventListener('click', function() {
+        document.getElementById('file-input').click();
+      });
+      document.getElementById('file-input').addEventListener('change', function() {
+        for (const file of this.files) doUpload(file);
+        this.value = '';
+      });
+
+      function doUpload(file) {
+        statusBar('正在上传: ' + file.name);
+        const params = new URLSearchParams();
+        params.set('path', currentPath);
+        params.set('name', file.name);
+        fetch('/api/upload?' + params.toString(), {
+          method: 'POST',
+          headers: { 'x-device-id': deviceId },
+          body: file
+        }).then(r => {
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
+          return r.json();
+        }).then(() => {
+          toast('上传完成: ' + file.name);
+          loadDirectory();
+        }).catch(err => {
+          statusBar('上传失败: ' + err.message, true);
+        });
+      }
+
+      // Drag & drop upload
+      document.addEventListener('dragover', function(e) { e.preventDefault(); });
+      document.addEventListener('drop', function(e) { e.preventDefault(); });
+      const dropContainer = document.getElementById('tab-files').querySelector('.container');
+      dropContainer.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.outline = '3px dashed #007AFF';
+        this.style.outlineOffset = '-6px';
+        this.style.borderRadius = '8px';
+      });
+      dropContainer.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.style.outline = '';
+        this.style.outlineOffset = '';
+      });
+      dropContainer.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.outline = '';
+        for (const file of e.dataTransfer.files) doUpload(file);
+      });
+
+      // Clipboard paste upload
+      document.addEventListener('paste', function(e) {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file) doUpload(file);
+          }
+        }
+      });
+
+      // Navigation
+      document.getElementById('btn-up').addEventListener('click', function() {
+        if (!currentPath) return;
+        const parts = currentPath.split('/');
+        parts.pop();
+        currentPath = parts.join('/');
         loadDirectory();
+      });
+      document.getElementById('btn-refresh').addEventListener('click', loadDirectory);
+
+      // Search
+      let searchTimer;
+      document.getElementById('search-input').addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        const q = this.value.trim();
+        document.getElementById('search-clear').style.display = q ? 'inline-block' : 'none';
+        searchTimer = setTimeout(() => doSearch(q), 300);
+      });
+      document.getElementById('search-clear').addEventListener('click', function() {
+        document.getElementById('search-input').value = '';
+        this.style.display = 'none';
+        searchQuery = '';
+        loadDirectory();
+      });
+
+      function doSearch(q) {
+        if (!q) { loadDirectory(); return; }
+        searchQuery = q;
+        document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner"></span>搜索中...</td></tr>';
+        const params = new URLSearchParams();
+        params.set('q', q);
+        params.set('path', currentPath);
+        api('/api/search?' + params.toString()).then(r => r.json()).then(data => {
+          entries = data;
+          offset = entries.length;
+          hasMore = false;
+          renderFiles();
+          if (data.length === 0) {
+            document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">未找到匹配的文件</td></tr>';
+          }
+        }).catch(err => {
+          document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">搜索失败: ' + err.message + '</td></tr>';
+        });
       }
-    });
-  });
-  tbody.querySelectorAll('[data-dl]').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      downloadFile(this.dataset.dl);
-    });
-  });
-  tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', function() {
-      if (this.checked) selected.add(this.dataset.name);
-      else selected.delete(this.dataset.name);
-      updateBatchBar();
-    });
-  });
 
-  document.getElementById('select-all').checked = false;
-}
+      // Batch selection
+      document.getElementById('select-all').addEventListener('change', function() {
+        if (this.checked) entries.forEach(e => selected.add(e.name));
+        else selected.clear();
+        document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
+        updateBatchBar();
+      });
 
-function renderBreadcrumb() {
-  const el = document.getElementById('breadcrumb');
-  if (!currentPath) {
-    el.innerHTML = '<a href="#" data-path="">根目录</a>';
-  } else {
-    const parts = currentPath.split('/');
-    let html = '<a href="#" data-path="">根目录</a>';
-    let acc = '';
-    for (const p of parts) {
-      acc = acc ? acc + '/' + p : p;
-      html += ' / <a href="#" data-path="' + acc + '">' + p + '</a>';
-    }
-    el.innerHTML = html;
-  }
-  el.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', function(e) {
-      e.preventDefault();
-      currentPath = this.dataset.path;
-      loadDirectory();
-    });
-  });
-}
+      function updateBatchBar() {
+        const bar = document.getElementById('batch-bar');
+        const count = selected.size;
+        bar.style.display = count > 0 ? 'flex' : 'none';
+        document.getElementById('batch-count').textContent = '已选择 ' + count + ' 项';
+      }
 
-function downloadFile(name) {
-  const filePath = currentPath ? currentPath + '/' + name : name;
-  statusBar('正在下载: ' + name);
-  api('/api/download?path=' + encodeURIComponent(filePath)).then(r => r.blob()).then(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    toast('下载完成: ' + name);
-  }).catch(err => {
-    statusBar('下载失败: ' + err.message, true);
-  });
-}
+      document.getElementById('batch-download').addEventListener('click', function() {
+        for (const name of selected) {
+          const entry = entries.find(e => e.name === name);
+          if (entry && !entry.is_dir) downloadFile(name);
+        }
+        selected.clear();
+        updateBatchBar();
+        document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+        document.getElementById('select-all').checked = false;
+      });
 
-// Upload
-document.getElementById('btn-upload').addEventListener('click', function() {
-  document.getElementById('file-input').click();
-});
-document.getElementById('file-input').addEventListener('change', function() {
-  for (const file of this.files) doUpload(file);
-  this.value = '';
-});
+      document.getElementById('batch-clear').addEventListener('click', function() {
+        selected.clear();
+        updateBatchBar();
+        document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+        document.getElementById('select-all').checked = false;
+      });
 
-function doUpload(file) {
-  statusBar('正在上传: ' + file.name);
-  const params = new URLSearchParams();
-  params.set('path', currentPath);
-  params.set('name', file.name);
-  fetch('/api/upload?' + params.toString(), {
-    method: 'POST',
-    headers: { 'x-device-id': deviceId },
-    body: file
-  }).then(r => {
-    if (!r.ok) return r.json().then(d => { throw new Error(d.error); });
-    return r.json();
-  }).then(() => {
-    toast('上传完成: ' + file.name);
-    loadDirectory();
-  }).catch(err => {
-    statusBar('上传失败: ' + err.message, true);
-  });
-}
+      // Infinite scroll
+      const observer = new IntersectionObserver(function(entries) {
+        if (entries[0].isIntersecting && hasMore && !loading && !searchQuery) {
+          document.getElementById('loading-more').style.display = 'block';
+          fetchFiles(false);
+        }
+      });
+      observer.observe(document.getElementById('end-marker'));
 
-// Drag & drop upload
-document.addEventListener('dragover', function(e) { e.preventDefault(); });
-document.addEventListener('drop', function(e) { e.preventDefault(); });
-const dropContainer = document.getElementById('tab-files').querySelector('.container');
-dropContainer.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  this.style.outline = '3px dashed #007AFF';
-  this.style.outlineOffset = '-6px';
-  this.style.borderRadius = '8px';
-});
-dropContainer.addEventListener('dragleave', function(e) {
-  e.preventDefault();
-  this.style.outline = '';
-  this.style.outlineOffset = '';
-});
-dropContainer.addEventListener('drop', function(e) {
-  e.preventDefault();
-  this.style.outline = '';
-  for (const file of e.dataTransfer.files) doUpload(file);
-});
+      // ============== Transfers ==============
 
-// Clipboard paste upload
-document.addEventListener('paste', function(e) {
-  const items = e.clipboardData && e.clipboardData.items;
-  if (!items) return;
-  for (const item of items) {
-    if (item.kind === 'file') {
-      const file = item.getAsFile();
-      if (file) doUpload(file);
-    }
-  }
-});
+      function loadTransfers() {
+        api('/api/transfers').then(r => r.json()).then(data => {
+          transfers = data || [];
+          renderTransferList();
+        }).catch(err => {
+          document.getElementById('transfers-content').innerHTML = '<div class="empty">加载传输列表失败</div>';
+        });
+      }
 
-// Navigation
-document.getElementById('btn-up').addEventListener('click', function() {
-  if (!currentPath) return;
-  const parts = currentPath.split('/');
-  parts.pop();
-  currentPath = parts.join('/');
-  loadDirectory();
-});
-document.getElementById('btn-refresh').addEventListener('click', loadDirectory);
+      function renderTransferList() {
+        const container = document.getElementById('transfers-content');
 
-// Search
-let searchTimer;
-document.getElementById('search-input').addEventListener('input', function() {
-  clearTimeout(searchTimer);
-  const q = this.value.trim();
-  document.getElementById('search-clear').style.display = q ? 'inline-block' : 'none';
-  searchTimer = setTimeout(() => doSearch(q), 300);
-});
-document.getElementById('search-clear').addEventListener('click', function() {
-  document.getElementById('search-input').value = '';
-  this.style.display = 'none';
-  searchQuery = '';
-  loadDirectory();
-});
+        const active = transfers.filter(t => t.status === 'Transferring' || t.status === 'Pending');
+        const paused = transfers.filter(t => t.status === 'Paused');
+        const completed = transfers.filter(t => t.status === 'Completed' || t.status === 'Failed' || t.status === 'Cancelled');
 
-function doSearch(q) {
-  if (!q) { loadDirectory(); return; }
-  searchQuery = q;
-  document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="loading"><span class="spinner"></span>搜索中...</td></tr>';
-  const params = new URLSearchParams();
-  params.set('q', q);
-  params.set('path', currentPath);
-  api('/api/search?' + params.toString()).then(r => r.json()).then(data => {
-    entries = data;
-    offset = entries.length;
-    hasMore = false;
-    renderFiles();
-    if (data.length === 0) {
-      document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">未找到匹配的文件</td></tr>';
-    }
-  }).catch(err => {
-    document.getElementById('file-list').innerHTML = '<tr><td colspan="5" class="empty">搜索失败: ' + err.message + '</td></tr>';
-  });
-}
+        document.getElementById('stat-active').textContent = active.length;
+        document.getElementById('stat-completed').textContent = transfers.filter(t => t.status === 'Completed').length;
+        document.getElementById('stat-failed').textContent = transfers.filter(t => t.status === 'Failed').length;
 
-// Batch selection
-document.getElementById('select-all').addEventListener('change', function() {
-  if (this.checked) entries.forEach(e => selected.add(e.name));
-  else selected.clear();
-  document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
-  updateBatchBar();
-});
+        let html = '';
 
-function updateBatchBar() {
-  const bar = document.getElementById('batch-bar');
-  const count = selected.size;
-  bar.style.display = count > 0 ? 'flex' : 'none';
-  document.getElementById('batch-count').textContent = '已选择 ' + count + ' 项';
-}
+        if (active.length > 0) {
+          html += '<div class="transfer-section"><h3>正在传输 (' + active.length + ')</h3><div class="transfer-list">';
+          for (const t of active) html += renderTransferItem(t);
+          html += '</div></div>';
+        }
 
-document.getElementById('batch-download').addEventListener('click', function() {
-  for (const name of selected) {
-    const entry = entries.find(e => e.name === name);
-    if (entry && !entry.is_dir) downloadFile(name);
-  }
-  selected.clear();
-  updateBatchBar();
-  document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = false);
-  document.getElementById('select-all').checked = false;
-});
+        if (paused.length > 0) {
+          html += '<div class="transfer-section"><h3>已暂停 (' + paused.length + ')</h3><div class="transfer-list">';
+          for (const t of paused) html += renderTransferItem(t);
+          html += '</div></div>';
+        }
 
-document.getElementById('batch-clear').addEventListener('click', function() {
-  selected.clear();
-  updateBatchBar();
-  document.querySelectorAll('#file-list input[type="checkbox"]').forEach(cb => cb.checked = false);
-  document.getElementById('select-all').checked = false;
-});
+        if (completed.length > 0) {
+          html += '<div class="transfer-section"><h3>历史记录 (' + completed.length + ')</h3><div class="transfer-list">';
+          for (const t of completed) html += renderTransferItem(t);
+          html += '</div></div>';
+        }
 
-// Infinite scroll
-const observer = new IntersectionObserver(function(entries) {
-  if (entries[0].isIntersecting && hasMore && !loading && !searchQuery) {
-    document.getElementById('loading-more').style.display = 'block';
-    fetchFiles(false);
-  }
-});
-observer.observe(document.getElementById('end-marker'));
+        if (transfers.length === 0) {
+          html = '<div class="empty"><p>暂无传输任务</p></div>';
+        }
 
-// ============== Transfers ==============
+        container.innerHTML = html;
 
-function loadTransfers() {
-  api('/api/transfers').then(r => r.json()).then(data => {
-    transfers = data || [];
-    renderTransferList();
-  }).catch(err => {
-    document.getElementById('transfers-content').innerHTML = '<div class="empty">加载传输列表失败</div>';
-  });
-}
+        // Bind action buttons
+        container.querySelectorAll('[data-pause]').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.dataset.pause;
+            api('/api/transfers/pause/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
+          });
+        });
+        container.querySelectorAll('[data-resume]').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.dataset.resume;
+            api('/api/transfers/resume/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
+          });
+        });
+        container.querySelectorAll('[data-cancel]').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.dataset.cancel;
+            api('/api/transfers/cancel/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
+          });
+        });
+      }
 
-function renderTransferList() {
-  const container = document.getElementById('transfers-content');
+      function renderTransferItem(t) {
+        const progress = t.file_size > 0 ? Math.round((t.bytes_transferred / t.file_size) * 100) : 0;
+        const dirIcon = t.direction === 'Download' ? '⬇' : '⬆';
 
-  const active = transfers.filter(t => t.status === 'Transferring' || t.status === 'Pending');
-  const paused = transfers.filter(t => t.status === 'Paused');
-  const completed = transfers.filter(t => t.status === 'Completed' || t.status === 'Failed' || t.status === 'Cancelled');
+        let statusText = t.status;
+        let statusClass = t.status.toLowerCase();
+        switch (t.status) {
+          case 'Pending': statusText = '等待中'; statusClass = 'pending'; break;
+          case 'Transferring': statusText = '传输中'; statusClass = 'transferring'; break;
+          case 'Paused': statusText = '已暂停'; statusClass = 'paused'; break;
+          case 'Completed': statusText = '已完成'; statusClass = 'completed'; break;
+          case 'Failed': statusText = '失败'; statusClass = 'failed'; break;
+          case 'Cancelled': statusText = '已取消'; statusClass = 'cancelled'; break;
+        }
 
-  document.getElementById('stat-active').textContent = active.length;
-  document.getElementById('stat-completed').textContent = transfers.filter(t => t.status === 'Completed').length;
-  document.getElementById('stat-failed').textContent = transfers.filter(t => t.status === 'Failed').length;
+        let html = '<div class="transfer-item' + (t.status === 'Completed' ? ' completed' : '') + (t.status === 'Failed' ? ' failed' : '') + '">';
+        html += '<div class="transfer-info">';
+        html += '<span>' + dirIcon + '</span>';
+        html += '<span class="transfer-name">' + escapeHtml(t.file_name) + '</span>';
+        html += '<span class="transfer-status ' + statusClass + '">' + statusText + '</span>';
+        if (t.error) html += '<span class="transfer-error">' + escapeHtml(t.error) + '</span>';
+        html += '</div>';
 
-  let html = '';
+        html += '<div class="transfer-progress">';
+        html += '<div class="bar"><div class="fill" style="width:' + Math.min(progress, 100) + '%"></div></div>';
+        html += '<span class="text">' + formatSize(t.bytes_transferred) + ' / ' + formatSize(t.file_size) + ' (' + progress + '%)</span>';
+        if (t.status === 'Transferring') html += '<span class="speed">' + formatSpeed(t.speed) + '</span>';
+        html += '</div>';
 
-  if (active.length > 0) {
-    html += '<div class="transfer-section"><h3>正在传输 (' + active.length + ')</h3><div class="transfer-list">';
-    for (const t of active) html += renderTransferItem(t);
-    html += '</div></div>';
-  }
+        html += '<div class="transfer-actions">';
+        if (t.status === 'Transferring') html += '<button class="pair-btn" data-pause="' + t.id + '">暂停</button>';
+        if (t.status === 'Paused') html += '<button class="pair-btn primary" data-resume="' + t.id + '">继续</button>';
+        if (t.status === 'Pending' || t.status === 'Transferring' || t.status === 'Paused') {
+          html += '<button class="pair-btn danger" data-cancel="' + t.id + '">取消</button>';
+        }
+        html += '</div></div>';
 
-  if (paused.length > 0) {
-    html += '<div class="transfer-section"><h3>已暂停 (' + paused.length + ')</h3><div class="transfer-list">';
-    for (const t of paused) html += renderTransferItem(t);
-    html += '</div></div>';
-  }
+        return html;
+      }
 
-  if (completed.length > 0) {
-    html += '<div class="transfer-section"><h3>历史记录 (' + completed.length + ')</h3><div class="transfer-list">';
-    for (const t of completed) html += renderTransferItem(t);
-    html += '</div></div>';
-  }
+      document.getElementById('refresh-transfers').addEventListener('click', loadTransfers);
 
-  if (transfers.length === 0) {
-    html = '<div class="empty"><p>暂无传输任务</p></div>';
-  }
+      // ============== Chat Events ==============
 
-  container.innerHTML = html;
+      document.getElementById('chat-send-btn').addEventListener('click', function() {
+        const input = document.getElementById('chat-input');
+        sendChatMessage(input.value);
+      });
+      document.getElementById('chat-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage(this.value);
+        }
+      });
 
-  // Bind action buttons
-  container.querySelectorAll('[data-pause]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = this.dataset.pause;
-      api('/api/transfers/pause/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
-    });
-  });
-  container.querySelectorAll('[data-resume]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = this.dataset.resume;
-      api('/api/transfers/resume/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
-    });
-  });
-  container.querySelectorAll('[data-cancel]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const id = this.dataset.cancel;
-      api('/api/transfers/cancel/' + encodeURIComponent(id), { method: 'POST' }).then(() => loadTransfers()).catch(e => toast(e.message));
-    });
-  });
-}
+      // File attachment
+      document.getElementById('chat-attach-btn').addEventListener('click', function() {
+        document.getElementById('chat-file-input').click();
+      });
+      document.getElementById('chat-file-input').addEventListener('change', function() {
+        if (this.files && this.files[0]) uploadChatFile(this.files[0]);
+        this.value = '';
+      });
 
-function renderTransferItem(t) {
-  const progress = t.file_size > 0 ? Math.round((t.bytes_transferred / t.file_size) * 100) : 0;
-  const dirIcon = t.direction === 'Download' ? '⬇' : '⬆';
+      // Emoji picker
+      document.getElementById('chat-emoji-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const picker = document.getElementById('emoji-picker');
+        picker.classList.toggle('show');
+      });
+      document.getElementById('emoji-picker').addEventListener('click', function(e) {
+        if (e.target.tagName === 'SPAN') {
+          const input = document.getElementById('chat-input');
+          input.value += e.target.textContent;
+          input.focus();
+          this.classList.remove('show');
+        }
+      });
+      // Close emoji picker on outside click
+      document.addEventListener('click', function() {
+        document.getElementById('emoji-picker').classList.remove('show');
+      });
 
-  let statusText = t.status;
-  let statusClass = t.status.toLowerCase();
-  switch (t.status) {
-    case 'Pending': statusText = '等待中'; statusClass = 'pending'; break;
-    case 'Transferring': statusText = '传输中'; statusClass = 'transferring'; break;
-    case 'Paused': statusText = '已暂停'; statusClass = 'paused'; break;
-    case 'Completed': statusText = '已完成'; statusClass = 'completed'; break;
-    case 'Failed': statusText = '失败'; statusClass = 'failed'; break;
-    case 'Cancelled': statusText = '已取消'; statusClass = 'cancelled'; break;
-  }
+      // Image preview close
+      document.getElementById('image-preview-modal').addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+      });
+      document.getElementById('image-preview-close').addEventListener('click', function() {
+        document.getElementById('image-preview-modal').style.display = 'none';
+      });
 
-  let html = '<div class="transfer-item' + (t.status === 'Completed' ? ' completed' : '') + (t.status === 'Failed' ? ' failed' : '') + '">';
-  html += '<div class="transfer-info">';
-  html += '<span>' + dirIcon + '</span>';
-  html += '<span class="transfer-name">' + escapeHtml(t.file_name) + '</span>';
-  html += '<span class="transfer-status ' + statusClass + '">' + statusText + '</span>';
-  if (t.error) html += '<span class="transfer-error">' + escapeHtml(t.error) + '</span>';
-  html += '</div>';
+      // Load online status and sidebar friends periodically
+      function fetchOnlineStatus() {
+        // 先发送心跳注册自己，再拉取在线列表
+        api('/api/chat/heartbeat', { method: 'POST' }).then(r => r.json()).then(data => {
+          onlineDevices = data || [];
+          renderFriendsPanel();
+        }).catch(() => {
+          // 降级：尝试只拉取在线列表
+          api('/api/chat/online').then(r => r.json()).then(data => {
+            onlineDevices = data || [];
+            renderFriendsPanel();
+          }).catch(() => {});
+        });
+      }
+      // 立即获取在线状态
+      fetchOnlineStatus();
+      setInterval(fetchOnlineStatus, 10000);
 
-  html += '<div class="transfer-progress">';
-  html += '<div class="bar"><div class="fill" style="width:' + Math.min(progress, 100) + '%"></div></div>';
-  html += '<span class="text">' + formatSize(t.bytes_transferred) + ' / ' + formatSize(t.file_size) + ' (' + progress + '%)</span>';
-  if (t.status === 'Transferring') html += '<span class="speed">' + formatSpeed(t.speed) + '</span>';
-  html += '</div>';
+      // ============== Settings ==============
 
-  html += '<div class="transfer-actions">';
-  if (t.status === 'Transferring') html += '<button class="pair-btn" data-pause="' + t.id + '">暂停</button>';
-  if (t.status === 'Paused') html += '<button class="pair-btn primary" data-resume="' + t.id + '">继续</button>';
-  if (t.status === 'Pending' || t.status === 'Transferring' || t.status === 'Paused') {
-    html += '<button class="pair-btn danger" data-cancel="' + t.id + '">取消</button>';
-  }
-  html += '</div></div>';
+      function loadSettings() {
+        // Pairing code
+        api('/api/pair/code').then(r => r.json()).then(data => {
+          document.getElementById('pairing-code-display').textContent = data.code || '----';
+        }).catch(() => {});
 
-  return html;
-}
+        // Trusted devices
+        api('/api/pair/trusted').then(r => r.json()).then(devices => {
+          const container = document.getElementById('trusted-devices-container');
+          if (!devices || devices.length === 0) {
+            container.innerHTML = '<p class="empty" style="padding:12px 0">暂无信任设备</p>';
+            return;
+          }
+          let html = '<ul class="trusted-list">';
+          for (const d of devices) {
+            const displayName = d.nickname || d.name || d.id.substring(0, 8);
+            html += '<li class="trusted-item">';
+            html += '<span><strong>' + escapeHtml(displayName) + '</strong> <span style="font-size:11px;color:#aeaeb2">' + d.id.substring(0, 8) + '...</span></span>';
+            html += '<button class="pair-btn danger" data-untrust="' + escapeHtml(d.id) + '" style="padding:2px 6px;font-size:11px">取消信任</button></li>';
+          }
+          html += '</ul>';
+          container.innerHTML = html;
+          container.querySelectorAll('[data-untrust]').forEach(btn => {
+            btn.addEventListener('click', function() {
+              const id = this.dataset.untrust;
+              api('/api/pair/trusted/' + encodeURIComponent(id), { method: 'DELETE' }).then(() => {
+                toast('已移除信任设备');
+                loadSettings();
+              }).catch(e => toast(e.message));
+            });
+          });
+        }).catch(() => {});
 
-document.getElementById('refresh-transfers').addEventListener('click', loadTransfers);
+        // Settings
+        api('/api/settings').then(r => r.json()).then(data => {
+          document.getElementById('require-pairing-chk').checked = data.require_pairing === true;
+        }).catch(() => {});
+      }
 
-// ============== Chat Events ==============
-
-document.getElementById('chat-send-btn').addEventListener('click', function() {
-  const input = document.getElementById('chat-input');
-  sendChatMessage(input.value);
-});
-document.getElementById('chat-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage(this.value);
-  }
-});
-
-// File attachment
-document.getElementById('chat-attach-btn').addEventListener('click', function() {
-  document.getElementById('chat-file-input').click();
-});
-document.getElementById('chat-file-input').addEventListener('change', function() {
-  if (this.files && this.files[0]) uploadChatFile(this.files[0]);
-  this.value = '';
-});
-
-// Emoji picker
-document.getElementById('chat-emoji-btn').addEventListener('click', function(e) {
-  e.stopPropagation();
-  const picker = document.getElementById('emoji-picker');
-  picker.classList.toggle('show');
-});
-document.getElementById('emoji-picker').addEventListener('click', function(e) {
-  if (e.target.tagName === 'SPAN') {
-    const input = document.getElementById('chat-input');
-    input.value += e.target.textContent;
-    input.focus();
-    this.classList.remove('show');
-  }
-});
-// Close emoji picker on outside click
-document.addEventListener('click', function() {
-  document.getElementById('emoji-picker').classList.remove('show');
-});
-
-// Image preview close
-document.getElementById('image-preview-modal').addEventListener('click', function(e) {
-  if (e.target === this) this.style.display = 'none';
-});
-document.getElementById('image-preview-close').addEventListener('click', function() {
-  document.getElementById('image-preview-modal').style.display = 'none';
-});
-
-// Load online status and sidebar friends periodically
-setInterval(function() {
-  api('/api/chat/online').then(r => r.json()).then(data => {
-    onlineDevices = data || [];
-    renderFriendsPanel();
-  }).catch(() => {});
-}, 10000);
-
-// ============== Settings ==============
-
-function loadSettings() {
-  // Pairing code
-  api('/api/pair/code').then(r => r.json()).then(data => {
-    document.getElementById('pairing-code-display').textContent = data.code || '----';
-  }).catch(() => {});
-
-  // Trusted devices
-  api('/api/pair/trusted').then(r => r.json()).then(devices => {
-    const container = document.getElementById('trusted-devices-container');
-    if (!devices || devices.length === 0) {
-      container.innerHTML = '<p class="empty" style="padding:12px 0">暂无信任设备</p>';
-      return;
-    }
-    let html = '<ul class="trusted-list">';
-    for (const d of devices) {
-      const displayName = d.nickname || d.name || d.id.substring(0, 8);
-      html += '<li class="trusted-item">';
-      html += '<span><strong>' + escapeHtml(displayName) + '</strong> <span style="font-size:11px;color:#aeaeb2">' + d.id.substring(0, 8) + '...</span></span>';
-      html += '<button class="pair-btn danger" data-untrust="' + escapeHtml(d.id) + '" style="padding:2px 6px;font-size:11px">取消信任</button></li>';
-    }
-    html += '</ul>';
-    container.innerHTML = html;
-    container.querySelectorAll('[data-untrust]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.untrust;
-        api('/api/pair/trusted/' + encodeURIComponent(id), { method: 'DELETE' }).then(() => {
-          toast('已移除信任设备');
-          loadSettings();
+      document.getElementById('rotate-code-btn').addEventListener('click', function() {
+        api('/api/pair/rotate', { method: 'POST' }).then(r => r.json()).then(data => {
+          document.getElementById('pairing-code-display').textContent = data.code || '----';
+          toast('配对码已更新');
         }).catch(e => toast(e.message));
       });
-    });
-  }).catch(() => {});
 
-  // Settings
-  api('/api/settings').then(r => r.json()).then(data => {
-    document.getElementById('require-pairing-chk').checked = data.require_pairing === true;
-  }).catch(() => {});
-}
+      document.getElementById('save-settings-btn').addEventListener('click', function() {
+        const requirePairing = document.getElementById('require-pairing-chk').checked;
+        api('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+          body: JSON.stringify({ require_pairing: requirePairing })
+        }).then(() => {
+          toast('设置已保存');
+        }).catch(e => toast(e.message));
+      });
 
-document.getElementById('rotate-code-btn').addEventListener('click', function() {
-  api('/api/pair/rotate', { method: 'POST' }).then(r => r.json()).then(data => {
-    document.getElementById('pairing-code-display').textContent = data.code || '----';
-    toast('配对码已更新');
-  }).catch(e => toast(e.message));
-});
+      // ============== Remote Control ==============
 
-document.getElementById('save-settings-btn').addEventListener('click', function() {
-  const requirePairing = document.getElementById('require-pairing-chk').checked;
-  api('/api/settings', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
-    body: JSON.stringify({ require_pairing: requirePairing })
-  }).then(() => {
-    toast('设置已保存');
-  }).catch(e => toast(e.message));
-});
+      let remoteStreamWs = null;
+      let remoteConnected = false;
+      let deviceIpMap = {}; // device_id -> { ip, port }
 
-// ============== Helpers ==============
+      function loadRemoteControl() {
+        // Render device list
+        const list = document.getElementById('remote-device-list');
+        if (!list) return;
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+        // Fetch device IP info from discovered devices
+        api('/api/devices').then(r => r.json()).then(devices => {
+          deviceIpMap = {};
+          for (const d of devices) {
+            deviceIpMap[d.id] = { ip: d.ip, port: d.port || 51111 };
+          }
+        }).catch(function() {});
 
-})();
-</script>
-</body>
+        // Get online trusted devices (excluding self)
+        const filtered = (onlineDevices || []).filter(id => id !== deviceId);
+        const trusted = [];
+
+        // We need trusted device list - fetch it
+        api('/api/pair/trusted').then(r => r.json()).then(devices => {
+          if (!devices || devices.length === 0) {
+            list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-tertiary)">没有已配对的设备</p>';
+            return;
+          }
+
+          const online = filtered;
+          let html = '';
+          for (const d of devices) {
+            if (d.id === deviceId) continue;
+            const isOnline = online.includes(d.id);
+            if (!isOnline) continue; // only show online devices
+            const displayName = d.nickname || d.name || d.id.substring(0, 8);
+            const initial = displayName.charAt(0).toUpperCase();
+            const color = getAvatarColor(displayName);
+            html += '<div class="remote-device-item" data-remote-id="' + escapeHtml(d.id) + '" data-remote-name="' + escapeHtml(d.name || '') + '">';
+            html += '<div class="remote-device-avatar" style="background:' + color + '">' + initial + '</div>';
+            html += '<div class="remote-device-info"><div class="remote-device-name">' + escapeHtml(displayName) + '</div>';
+            html += '<div class="remote-device-status">在线 · 点击远程控制</div></div></div>';
+          }
+
+          if (!html) {
+            // No remote devices available — show local option
+            const localName = localStorage.getItem('device_name') || '本机';
+            html += '<div class="remote-device-item" data-remote-id="local" data-remote-name="本机屏幕" data-local="1">';
+            html += '<div class="remote-device-avatar" style="background:' + getAvatarColor('本机') + '">本</div>';
+            html += '<div class="remote-device-info"><div class="remote-device-name">本机屏幕</div>';
+            html += '<div class="remote-device-status">本地 · 点击查看屏幕</div></div></div>';
+          }
+          list.innerHTML = html;
+            list.innerHTML = html;
+            list.querySelectorAll('.remote-device-item').forEach(function(el) {
+              el.addEventListener('click', function() {
+                const targetId = this.dataset.remoteId;
+                const targetName = this.dataset.remoteName;
+                startRemoteControl(targetId, targetName);
+              });
+            });
+          }
+        }).catch(function() {
+          list.innerHTML = '<p style="text-align:center;padding:40px 0;color:var(--text-tertiary)">加载设备失败</p>';
+        });
+      }
+
+      function startRemoteControl(targetId, targetName) {
+        if (remoteConnected) return;
+
+        document.getElementById('remote-device-list').style.display = 'none';
+        document.getElementById('remote-screen-area').style.display = 'flex';
+        document.getElementById('remote-screen-loading').style.display = 'flex';
+        document.getElementById('remote-screen-img').style.display = 'none';
+        document.getElementById('remote-error').style.display = 'none';
+        document.getElementById('remote-screen-title').textContent = targetName || ('设备 ' + targetId.substring(0, 8));
+        document.getElementById('remote-status').textContent = '正在连接...';
+
+        const img = document.getElementById('remote-screen-img');
+
+        // 加载显示器列表（仅本地模式）
+        if (targetId === 'local') {
+          fetch('/remote/monitors').then(function(r) { return r.json(); }).then(function(monitors) {
+            if (monitors && monitors.length > 1) {
+              var sel = document.getElementById('monitor-selector');
+              sel.style.display = 'inline-block';
+              sel.innerHTML = monitors.map(function(m, i) {
+                return '<option value="' + i + '">' + m.name + ' (' + m.width + '×' + m.height + ')</option>';
+              }).join('');
+              sel.onchange = function() {
+                // TODO: 实现显示器切换（需要后端支持 monitor 参数）
+              };
+            }
+          }).catch(function() {});
+          // Local device — direct stream
+          img.onload = function() {
+            document.getElementById('remote-screen-loading').style.display = 'none';
+            img.style.display = 'block';
+            document.getElementById('remote-status').textContent = '已连接';
+            remoteConnected = true;
+          };
+          img.onerror = function() {
+            document.getElementById('remote-screen-loading').style.display = 'none';
+            showRemoteError('无法连接屏幕流');
+          };
+          img.src = '/remote/screen/stream?device_id=' + encodeURIComponent(deviceId);
+        } else {
+          // Remote device — proxy through local server
+          const info = deviceIpMap[targetId];
+          if (!info || !info.ip) {
+            document.getElementById('remote-screen-loading').style.display = 'none';
+            showRemoteError('无法获取设备 IP 信息，请确保设备在线可发现');
+            return;
+          }
+          img.onload = function() {
+            document.getElementById('remote-screen-loading').style.display = 'none';
+            img.style.display = 'block';
+            document.getElementById('remote-status').textContent = '已连接至 ' + (targetName || '远程设备');
+            remoteConnected = true;
+          };
+          img.onerror = function() {
+            document.getElementById('remote-screen-loading').style.display = 'none';
+            showRemoteError('远程设备屏幕流连接失败');
+          };
+          img.src = '/remote/screen/proxy?ip=' + encodeURIComponent(info.ip) + '&port=' + (info.port || 51111);
+        }
+      }
+
+      function stopRemoteControl() {
+        remoteConnected = false;
+        document.getElementById('remote-screen-img').src = '';
+        document.getElementById('remote-screen-area').style.display = 'none';
+        document.getElementById('remote-device-list').style.display = 'flex';
+        document.getElementById('remote-status').textContent = '未连接';
+      }
+
+      function sendRemoteClipboard() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          alert('WebSocket 未连接');
+          return;
+        }
+        navigator.clipboard.readText().then(function(text) {
+          if (text) {
+            ws.send(JSON.stringify({ type: 'clipboard', content: text }));
+            document.getElementById('remote-status').textContent = '剪贴板已同步';
+          }
+        }).catch(function() {
+          alert('无法读取剪贴板');
+        });
+      }
+
+      var isRecording = false;
+      var recordingStartTime = null;
+      var recordingInterval = null;
+
+      function toggleRecording() {
+        if (!isRecording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
+      }
+
+      function startRecording() {
+        if (isRecording) return;
+        isRecording = true;
+        recordingStartTime = Date.now();
+        var btn = document.getElementById('btn-remote-record');
+        btn.textContent = '录制 0s';
+        btn.style.background = '#e74c3c';
+        btn.style.color = 'white';
+        recordingInterval = setInterval(function() {
+          var elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+          btn.textContent = '录制 ' + elapsed + 's';
+        }, 1000);
+        document.getElementById('remote-status').textContent = '开始录制';
+      }
+
+      function stopRecording() {
+        if (!isRecording) return;
+        isRecording = false;
+        if (recordingInterval) {
+          clearInterval(recordingInterval);
+          recordingInterval = null;
+        }
+        var btn = document.getElementById('btn-remote-record');
+        btn.textContent = '录制';
+        btn.style.background = '';
+        btn.style.color = '';
+        document.getElementById('remote-status').textContent = '录制已保存';
+      }
+
+      function toggleFullscreen() {
+        var viewport = document.querySelector('#remote-screen-area > div:nth-child(2)');
+        if (!viewport) viewport = document.getElementById('remote-screen-img');
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else if (viewport) {
+          viewport.requestFullscreen();
+        }
+      }
+
+      document.addEventListener('fullscreenchange', function() {
+        var btn = document.getElementById('btn-remote-fullscreen');
+        if (btn) {
+          btn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+        }
+      });
+
+      function showRemoteError(msg) {
+        const el = document.getElementById('remote-error');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('remote-status').textContent = '连接失败';
+      }
+
+      // Remote control event listeners
+      document.addEventListener('click', function(e) {
+        const item = e.target.closest('.remote-device-item');
+        if (item) {
+          // handled inline
+        }
+      });
+
+      document.getElementById('btn-remote-disconnect').addEventListener('click', stopRemoteControl);
+
+      // Avatar color helper
+      const RC_AVATAR_COLORS = ['#FF6B6B','#FFA94D','#FFD43B','#69DB7C','#38D9A9','#4DABF7','#748FFC','#DA77F2'];
+      function getAvatarColor(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return RC_AVATAR_COLORS[Math.abs(hash) % RC_AVATAR_COLORS.length];
+      }
+
+      // Update remote device list when online status changes
+      // Hook into the existing fetchOnlineStatus interval
+      const origFetchOnline = fetchOnlineStatus;
+      fetchOnlineStatus = function() {
+        origFetchOnline();
+        // Also refresh remote control if its tab is active
+        const remoteTab = document.getElementById('tab-remote');
+        if (remoteTab && remoteTab.classList.contains('active') && !remoteConnected) {
+          loadRemoteControl();
+        }
+      };
+
+      // ============== Helpers ==============
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      })();
+    </script>
+  </body>
 </html>

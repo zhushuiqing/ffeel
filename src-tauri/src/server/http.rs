@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     extract::{Path, Query, Request, State},
-    http::{HeaderMap, HeaderValue, StatusCode},
+    http::{HeaderMap, HeaderValue, Response, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Json},
     routing::{delete, get, post},
@@ -21,6 +21,8 @@ use tokio_rustls::TlsAcceptor;
 use tower::ServiceExt;
 use tower_http::cors::CorsLayer;
 
+use crate::discovery::DeviceInfo;
+use crate::remote::ClipboardSync;
 use crate::security::pairing::SharedPairingManager;
 use crate::server::ws::{ChatStore, WsConnectionTracker, WsMessage};
 use crate::transfer::queue::{TransferManager, TransferTask};
@@ -87,6 +89,14 @@ pub struct AppState {
     pub require_pairing: bool,
     pub chat_store: ChatStore,
     pub ws_tracker: WsConnectionTracker,
+    /// 本机设备 ID（用于过滤自身）
+    pub device_id: String,
+    /// 已发现的设备列表（mDNS 发现，含 IP/端口）
+    pub discovered_devices: Arc<RwLock<Vec<DeviceInfo>>>,
+    /// 剪贴板同步服务
+    pub clipboard_sync: ClipboardSync,
+    /// 屏幕录制器
+    pub screen_recorder: crate::remote::ScreenRecorder,
 }
 
 /// 构建 HTTP 路由
@@ -98,6 +108,10 @@ pub fn build_router(
     require_pairing: bool,
     chat_store: ChatStore,
     ws_tracker: WsConnectionTracker,
+    device_id: String,
+    discovered_devices: Arc<RwLock<Vec<DeviceInfo>>>,
+    clipboard_sync: ClipboardSync,
+    screen_recorder: crate::remote::ScreenRecorder,
 ) -> Router {
     let state = AppState {
         share_dir,
@@ -107,6 +121,10 @@ pub fn build_router(
         require_pairing,
         chat_store,
         ws_tracker,
+        device_id,
+        discovered_devices,
+        clipboard_sync,
+        screen_recorder,
     };
 
     Router::new()
@@ -131,6 +149,11 @@ pub fn build_router(
         .route("/api/chat/upload", post(upload_chat_file_handler))
         .route("/api/chat/download/:file_id", get(download_chat_file_handler))
         .route("/api/chat/online", get(get_online_devices_handler))
+        .route("/api/chat/heartbeat", post(heartbeat_handler))
+        .route("/remote/screen/stream", get(remote_screen_stream_handler))
+        .route("/remote/screen/proxy", get(remote_screen_proxy_handler))
+        .route("/remote/monitors", get(get_monitors_handler))
+        .route("/api/devices", get(get_devices_handler))
         .route("/api/pair/check", get(check_pairing_handler))
         .route("/api/health", get(health_check))
         .route("/ws", get(crate::server::ws::ws_handler))
@@ -152,7 +175,7 @@ async fn pairing_middleware(
 ) -> Result<impl IntoResponse, AppErrorResponse> {
     if state.require_pairing {
         let path = req.uri().path();
-        if path == "/" || path == "/api/health" || path == "/api/pair" || path == "/api/pair/check" || path == "/api/chat/online" {
+        if path == "/" || path == "/api/health" || path == "/api/pair" || path == "/api/pair/check" || path == "/api/chat/online" || path == "/api/chat/heartbeat" || path == "/api/devices" || path.starts_with("/remote/screen") {
             return Ok(next.run(req).await);
         }
         let device_id = req
@@ -615,19 +638,26 @@ async fn rotate_pairing_code_handler(
     Ok(Json(serde_json::json!({"code": code})))
 }
 
-/// 获取信任设备列表（含名称）
+/// 获取信任设备列表（含名称，过滤请求方自身）
 async fn list_trusted_devices_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<serde_json::Value>>, AppErrorResponse> {
     let devices = state.pairing.trusted_devices().await;
-    let result: Vec<serde_json::Value> = devices.into_iter().map(|(id, entry)| {
-        serde_json::json!({
-            "id": id,
-            "name": entry.name,
-            "nickname": entry.nickname,
-            "paired_at": entry.paired_at,
-        })
-    }).collect();
+    let requestor_id = headers
+        .get("x-device-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let result: Vec<serde_json::Value> = devices.into_iter()
+        .filter(|(id, _)| id != requestor_id)
+        .map(|(id, entry)| {
+            serde_json::json!({
+                "id": id,
+                "name": entry.name,
+                "nickname": entry.nickname,
+                "paired_at": entry.paired_at,
+            })
+        }).collect();
     Ok(Json(result))
 }
 
@@ -891,6 +921,134 @@ async fn download_chat_file_handler(
     Ok((headers, data))
 }
 
+/// 心跳注册 —— 浏览器通过 HTTP 注册到在线跟踪器
+async fn heartbeat_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<String>>, AppErrorResponse> {
+    let device_id = headers
+        .get("x-device-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    if !device_id.is_empty() {
+        state.ws_tracker.register(device_id.clone()).await;
+    }
+    let online = state.ws_tracker.get_online_devices().await;
+    Ok(Json(online))
+}
+
+/// MJPEG 屏幕流 —— 通过 multipart/x-mixed-replace 推送屏幕帧
+/// 可在 <img> 标签中直接渲染:
+///   <img src="https://host:51111/remote/screen/stream?device_id=xxx">
+///
+/// 认证方式 (二选一):
+///   1. Header: `x-device-id` (程序化客户端)
+///   2. Query:  `?device_id=xxx` (<img> 标签)
+async fn remote_screen_stream_handler(
+    State(state): State<AppState>,
+) -> Result<Response<Body>, AppErrorResponse> {
+    use axum::body::Bytes;
+    use futures_util::StreamExt;
+    use tokio_stream::wrappers::ReceiverStream;
+
+    // 认证由 pairing_middleware 统一处理（/remote/screen 路径已做 bypass）
+    let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(8);
+    let rx_stream = ReceiverStream::new(rx);
+
+    // 获取录制器（用于同步录制帧）
+    let recorder = Some(state.screen_recorder.clone());
+
+    // 启动屏幕捕获循环（在阻塞线程中）
+    crate::remote::start_screen_stream(
+        tx,
+        crate::remote::DEFAULT_JPEG_QUALITY,
+        crate::remote::DEFAULT_FPS,
+        crate::remote::DEFAULT_SCALE,
+        false,
+        recorder,
+    );
+
+    // 将 Channel 流转换为 HTTP Body
+    let body = Body::from_stream(rx_stream.map(|data| {
+        Ok::<_, axum::Error>(Bytes::from(data))
+    }));
+
+    Ok(Response::builder()
+        .header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+        .header("Access-Control-Allow-Origin", "*")
+        .body(body)
+        .unwrap())
+}
+
+/// 设备发现代理端点：连接远程设备的 MJPEG 屏幕流并同源中继
+async fn remote_screen_proxy_handler(
+    State(state): State<AppState>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Result<Response<Body>, AppErrorResponse> {
+    use futures_util::StreamExt;
+    let ip = query.get("ip").cloned().unwrap_or_default();
+    let port: u16 = query.get("port").and_then(|p| p.parse().ok()).unwrap_or(51111);
+
+    if ip.is_empty() {
+        return Err(AppErrorResponse((
+            StatusCode::BAD_REQUEST,
+            "缺少 ip 参数".to_string(),
+        )));
+    }
+
+    let target_url = format!(
+        "https://{}:{}/remote/screen/stream?device_id={}",
+        ip, port, state.device_id
+    );
+
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| {
+            AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP 客户端创建失败: {}", e)))
+        })?;
+
+    let response = client.get(&target_url).send().await.map_err(|e| {
+        AppErrorResponse((StatusCode::BAD_GATEWAY, format!("连接远程设备失败: {}", e)))
+    })?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        return Err(AppErrorResponse((StatusCode::BAD_GATEWAY, format!("远程设备返回错误: {}", status))));
+    }
+
+    let upstream_body = response.bytes_stream();
+    let body = Body::from_stream(upstream_body.map(|result| {
+        result
+            .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            })
+    }));
+
+    Ok(Response::builder()
+        .header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+        .header("Access-Control-Allow-Origin", "*")
+        .body(body)
+        .unwrap())
+}
+
+/// 获取显示器列表
+async fn get_monitors_handler() -> Result<Json<Vec<crate::remote::MonitorInfo>>, AppErrorResponse> {
+    let monitors = crate::remote::get_monitors().map_err(|e| {
+        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e))
+    })?;
+    Ok(Json(monitors))
+}
+
+/// 获取已发现的设备列表（含 IP/端口）
+async fn get_devices_handler(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<DeviceInfo>>, AppErrorResponse> {
+    let devices = state.discovered_devices.read().unwrap().clone();
+    Ok(Json(devices))
+}
+
 /// 获取在线设备列表
 async fn get_online_devices_handler(
     State(state): State<AppState>,
@@ -1100,7 +1258,7 @@ mod tests {
         let tm = Arc::new(Mutex::new(TransferManager::new(3)));
         let pairing = SharedPairingManager::new(PairingManager::new());
 
-        let app = build_router(Arc::new(RwLock::new(dir.path().to_path_buf())), tm, ws_tx, pairing, false, ChatStore::new(), WsConnectionTracker::new());
+        let app = build_router(Arc::new(RwLock::new(dir.path().to_path_buf())), tm, ws_tx, pairing, false, ChatStore::new(), WsConnectionTracker::new(), "test-device".to_string(), Arc::new(RwLock::new(Vec::new())), ClipboardSync::new().unwrap());
 
         let (cert_pem, key_pem) = test_cert();
 

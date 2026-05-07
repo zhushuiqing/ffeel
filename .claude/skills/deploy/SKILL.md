@@ -9,7 +9,7 @@ metadata:
 
 # 一键部署技能
 
-> 为 ffeel 项目生成 Mac（.dmg）和 Windows（.msi/.exe）安装包。
+> 生成 Mac（.dmg）和 Windows（.msi/.exe）安装包。
 
 ## 流程
 

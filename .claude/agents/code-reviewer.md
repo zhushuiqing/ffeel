@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Expert code reviewer. Use PROACTIVELY when reviewing PRs, checking implementations, or validating code before merging.
+description: 代码审查专家。审查 PR、检查实现、验证代码时主动使用。
 tools: ["Read", "Grep", "Glob", "Bash", "WebFetch"]
 model: sonnet
 ---

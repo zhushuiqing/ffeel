@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{broadcast, Mutex, RwLock};
 
+use crate::remote::{ClipboardSync, InputEvent};
 use crate::server::http::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,7 +55,53 @@ pub enum WsMessage {
         #[serde(default)]
         to_id: Option<String>,
     },
+    // == Remote Control ==
+    /// 请求开始远程控制 (控制端 → 被控端)
+    RemoteControlRequest {
+        controller_device_id: String,
+        controller_name: String,
+        #[serde(default = "default_rc_quality")]
+        quality: String,
+        #[serde(default = "default_rc_fps")]
+        fps: u32,
+    },
+    /// 远程控制请求响应 (被控端 → 控制端)
+    RemoteControlResponse {
+        accepted: bool,
+        reason: Option<String>,
+        screen_width: Option<u32>,
+        screen_height: Option<u32>,
+    },
+    /// 停止远程控制
+    RemoteControlStop {
+        reason: Option<String>,
+    },
+    /// 输入事件 (控制端 → 被控端)
+    InputEvent {
+        event_type: String,
+        #[serde(default)]
+        x: Option<f64>,
+        #[serde(default)]
+        y: Option<f64>,
+        #[serde(default)]
+        button: Option<String>,
+        #[serde(default)]
+        key: Option<String>,
+        #[serde(default)]
+        delta_x: Option<i32>,
+        #[serde(default)]
+        delta_y: Option<i32>,
+    },
+    /// 帧率统计 (被控端 → 控制端)
+    RemoteControlStats {
+        fps: f64,
+        bytes_per_sec: f64,
+        frame_count: u64,
+    },
 }
+
+fn default_rc_quality() -> String { "medium".to_string() }
+fn default_rc_fps() -> u32 { 15 }
 
 /// 聊天消息记录（含文件消息支持）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +154,10 @@ impl WsConnectionTracker {
     }
 
     pub async fn get_online_devices(&self) -> Vec<String> {
-        self.inner.read().await.keys().cloned().collect()
+        let mut map = self.inner.write().await;
+        let cutoff = Instant::now() - std::time::Duration::from_secs(35);
+        map.retain(|_, last_seen| *last_seen > cutoff);
+        map.keys().cloned().collect()
     }
 }
 
@@ -215,7 +265,8 @@ pub async fn ws_handler(
     let ws_tx = state.ws_tx.clone();
     let chat_store = state.chat_store.clone();
     let ws_tracker = state.ws_tracker.clone();
-    ws.on_upgrade(move |socket| handle_ws_connection(socket, rx, ws_tx, chat_store, ws_tracker))
+    let clipboard_sync = state.clipboard_sync.clone();
+    ws.on_upgrade(move |socket| handle_ws_connection(socket, rx, ws_tx, chat_store, ws_tracker, clipboard_sync))
 }
 
 async fn handle_ws_connection(
@@ -224,6 +275,7 @@ async fn handle_ws_connection(
     ws_tx: broadcast::Sender<WsMessage>,
     chat_store: ChatStore,
     ws_tracker: WsConnectionTracker,
+    clipboard_sync: ClipboardSync,
 ) {
     let (mut sender, mut receiver) = socket.split();
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
@@ -287,6 +339,33 @@ async fn handle_ws_connection(
                                     // 心跳回复
                                     if let Some(ref id) = registered_device_id {
                                         ws_tracker.heartbeat(id).await;
+                                    }
+                                }
+                                "input" => {
+                                    // 远程控制输入事件处理（使用 spawn_blocking 执行）
+                                    let input_event = crate::remote::InputEvent {
+                                        event_type: val.get("event_type").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                        x: val.get("x").and_then(|v| v.as_i64()).map(|v| v as i32),
+                                        y: val.get("y").and_then(|v| v.as_i64()).map(|v| v as i32),
+                                        button: val.get("button").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                        key: val.get("key").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                        delta: val.get("delta_y").and_then(|v| v.as_i64()).map(|v| v as i32),
+                                        text: val.get("text").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                        keys: val.get("keys").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                    };
+                                    tokio::task::spawn_blocking(move || {
+                                        let _ = crate::remote::handle_input_event(&input_event);
+                                    });
+                                }
+                                "clipboard" => {
+                                    // 剪贴板同步：接收远程剪贴板内容并设置到本地
+                                    let content = val.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                                    if !content.is_empty() {
+                                        let sync = clipboard_sync.clone();
+                                        let content_str = content.to_string();
+                                        tokio::spawn(async move {
+                                            let _ = sync.set_text(&content_str).await;
+                                        });
                                     }
                                 }
                                 _ => {}

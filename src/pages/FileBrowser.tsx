@@ -2,7 +2,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import type { DeviceInfo, DirEntry } from "../types";
-import { browseDirectory, downloadFile, downloadDirectory, uploadFile as apiUploadFile, searchFiles as apiSearchFiles, getPairingCode } from "../api";
+import {
+  browseDirectory,
+  downloadFile,
+  downloadDirectory,
+  uploadFile as apiUploadFile,
+  searchFiles as apiSearchFiles,
+  getPairingCode,
+} from "../api";
 import PairingModal from "../components/PairingModal";
 
 interface FileBrowserProps {
@@ -16,24 +23,82 @@ function fileIcon(name: string, isDir: boolean): string {
   if (isDir) return "📁";
   const ext = name.includes(".") ? name.split(".").pop()?.toLowerCase() : "";
   switch (ext) {
-    case "jpg": case "jpeg": case "png": case "gif": case "bmp": case "webp": case "svg": case "ico":
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "bmp":
+    case "webp":
+    case "svg":
+    case "ico":
       return "🖼️";
-    case "mp4": case "mkv": case "avi": case "mov": case "wmv": case "flv": case "webm":
+    case "mp4":
+    case "mkv":
+    case "avi":
+    case "mov":
+    case "wmv":
+    case "flv":
+    case "webm":
       return "🎬";
-    case "mp3": case "wav": case "flac": case "aac": case "ogg": case "wma": case "m4a":
+    case "mp3":
+    case "wav":
+    case "flac":
+    case "aac":
+    case "ogg":
+    case "wma":
+    case "m4a":
       return "🎵";
-    case "zip": case "rar": case "7z": case "tar": case "gz": case "bz2": case "xz":
+    case "zip":
+    case "rar":
+    case "7z":
+    case "tar":
+    case "gz":
+    case "bz2":
+    case "xz":
       return "🗜️";
     case "pdf":
       return "📕";
-    case "doc": case "docx": case "xls": case "xlsx": case "ppt": case "pptx":
+    case "doc":
+    case "docx":
+    case "xls":
+    case "xlsx":
+    case "ppt":
+    case "pptx":
       return "📊";
-    case "txt": case "md": case "log":
+    case "txt":
+    case "md":
+    case "log":
       return "📝";
-    case "html": case "css": case "js": case "ts": case "tsx": case "jsx": case "json": case "xml": case "yaml": case "yml": case "toml":
-    case "rs": case "py": case "go": case "java": case "c": case "cpp": case "h": case "hpp": case "rb": case "php": case "swift": case "kt":
+    case "html":
+    case "css":
+    case "js":
+    case "ts":
+    case "tsx":
+    case "jsx":
+    case "json":
+    case "xml":
+    case "yaml":
+    case "yml":
+    case "toml":
+    case "rs":
+    case "py":
+    case "go":
+    case "java":
+    case "c":
+    case "cpp":
+    case "h":
+    case "hpp":
+    case "rb":
+    case "php":
+    case "swift":
+    case "kt":
       return "💻";
-    case "exe": case "msi": case "dmg": case "app": case "deb": case "rpm":
+    case "exe":
+    case "msi":
+    case "dmg":
+    case "app":
+    case "deb":
+    case "rpm":
       return "⚙️";
     default:
       return "📄";
@@ -85,7 +150,13 @@ export default function FileBrowser({
       setHasMore(true);
       loadedRef.current = 0;
       try {
-        const result = await browseDirectory(device.ip, device.port, path, 0, PAGE_SIZE);
+        const result = await browseDirectory(
+          device.ip,
+          device.port,
+          path,
+          0,
+          PAGE_SIZE,
+        );
         setEntries(result);
         loadedRef.current = result.length;
         setHasMore(result.length >= PAGE_SIZE);
@@ -100,7 +171,7 @@ export default function FileBrowser({
         setLoading(false);
       }
     },
-    [device.ip, device.port, onStatusMessage]
+    [device.ip, device.port, onStatusMessage],
   );
 
   const loadMore = useCallback(async () => {
@@ -108,8 +179,14 @@ export default function FileBrowser({
     setLoadingMore(true);
     try {
       const offset = loadedRef.current;
-      const result = await browseDirectory(device.ip, device.port, currentPath, offset, PAGE_SIZE);
-      setEntries(prev => [...prev, ...result]);
+      const result = await browseDirectory(
+        device.ip,
+        device.port,
+        currentPath,
+        offset,
+        PAGE_SIZE,
+      );
+      setEntries((prev) => [...prev, ...result]);
       loadedRef.current = offset + result.length;
       if (result.length < PAGE_SIZE) setHasMore(false);
     } catch (err) {
@@ -117,7 +194,14 @@ export default function FileBrowser({
     } finally {
       setLoadingMore(false);
     }
-  }, [device.ip, device.port, currentPath, loadingMore, hasMore, onStatusMessage]);
+  }, [
+    device.ip,
+    device.port,
+    currentPath,
+    loadingMore,
+    hasMore,
+    onStatusMessage,
+  ]);
 
   useEffect(() => {
     loadDirectory("");
@@ -125,9 +209,7 @@ export default function FileBrowser({
 
   const handleNavigate = async (entry: DirEntry) => {
     if (entry.is_dir) {
-      const newPath = currentPath
-        ? `${currentPath}/${entry.name}`
-        : entry.name;
+      const newPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
       await loadDirectory(newPath);
     }
   };
@@ -145,7 +227,9 @@ export default function FileBrowser({
         const savePath = downloadDir
           ? `${downloadDir}/${entry.name}`
           : `${device.name}_${entry.name}`;
-        const remotePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+        const remotePath = currentPath
+          ? `${currentPath}/${entry.name}`
+          : entry.name;
 
         onStatusMessage(`开始下载文件夹: ${entry.name}`);
         await downloadDirectory(device.ip, device.port, remotePath, savePath);
@@ -154,7 +238,9 @@ export default function FileBrowser({
         const savePath = downloadDir
           ? `${downloadDir}/${entry.name}`
           : `${device.name}_${entry.name}`;
-        const remotePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+        const remotePath = currentPath
+          ? `${currentPath}/${entry.name}`
+          : entry.name;
 
         await downloadFile(
           device.ip,
@@ -162,7 +248,7 @@ export default function FileBrowser({
           remotePath,
           savePath,
           entry.name,
-          entry.size ?? 0
+          entry.size ?? 0,
         );
         onStatusMessage(`已开始下载: ${entry.name}`);
       }
@@ -200,24 +286,28 @@ export default function FileBrowser({
   // 监听文件拖拽上传
   useEffect(() => {
     let cancelled = false;
-    const unlistenPromise = listen<{ paths: string[] }>("tauri://drag-drop", async (event) => {
-      if (cancelled) return;
-      setDragOver(false);
-      let uploadCount = 0;
-      for (const path of event.payload.paths) {
-        const name = path.split("/").pop() || path.split("\\").pop() || "file";
-        onStatusMessage(`正在上传: ${name}`);
-        try {
-          await apiUploadFile(device.ip, device.port, currentPath, path);
-          uploadCount++;
-        } catch (err) {
-          onStatusMessage(`上传失败: ${name} - ${err}`);
+    const unlistenPromise = listen<{ paths: string[] }>(
+      "tauri://drag-drop",
+      async (event) => {
+        if (cancelled) return;
+        setDragOver(false);
+        let uploadCount = 0;
+        for (const path of event.payload.paths) {
+          const name =
+            path.split("/").pop() || path.split("\\").pop() || "file";
+          onStatusMessage(`正在上传: ${name}`);
+          try {
+            await apiUploadFile(device.ip, device.port, currentPath, path);
+            uploadCount++;
+          } catch (err) {
+            onStatusMessage(`上传失败: ${name} - ${err}`);
+          }
         }
-      }
-      if (uploadCount > 0) {
-        onStatusMessage(`已上传 ${uploadCount} 个文件`);
-      }
-    });
+        if (uploadCount > 0) {
+          onStatusMessage(`已上传 ${uploadCount} 个文件`);
+        }
+      },
+    );
     return () => {
       cancelled = true;
       unlistenPromise.then((fn) => fn());
@@ -242,8 +332,8 @@ export default function FileBrowser({
 
   // 拖拽下载（从文件列表拖出）
   const handleFileDragStart = (e: React.DragEvent, entry: DirEntry) => {
-    e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('text/plain', entry.name);
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", entry.name);
     setDragFile(entry);
   };
 
@@ -273,21 +363,28 @@ export default function FileBrowser({
     }
   };
 
-  let searchTimer: ReturnType<typeof setTimeout>;
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    clearTimeout(searchTimer);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
     if (!value.trim()) {
       setSearchResults(null);
       return;
     }
-    searchTimer = setTimeout(async () => {
+    searchTimerRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const results = await apiSearchFiles(device.ip, device.port, currentPath, value.trim());
+        const results = await apiSearchFiles(
+          device.ip,
+          device.port,
+          currentPath,
+          value.trim(),
+        );
         setSearchResults(results);
-      } catch (err) {
+      } catch {
         setSearchResults([]);
       } finally {
         setSearching(false);
@@ -348,7 +445,10 @@ export default function FileBrowser({
       {dragFile && !dragFile.is_dir && (
         <div
           className="download-drop-zone"
-          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onDrop={handleDownloadDrop}
           onDragLeave={() => {}}
         >
@@ -360,7 +460,11 @@ export default function FileBrowser({
           浏览: {device.name} ({device.ip})
         </h2>
         <div className="path-bar">
-          <button className="btn btn-sm" onClick={handleGoUp} disabled={!currentPath}>
+          <button
+            className="btn btn-sm"
+            onClick={handleGoUp}
+            disabled={!currentPath}
+          >
             ⬆ 上级目录
           </button>
           <button className="btn btn-sm btn-primary" onClick={handleUpload}>
@@ -373,7 +477,10 @@ export default function FileBrowser({
       {selectedFiles.size > 0 && (
         <div className="batch-bar">
           <span>已选择 {selectedFiles.size} 项</span>
-          <button className="btn btn-sm btn-primary" onClick={handleDownloadSelected}>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={handleDownloadSelected}
+          >
             下载选中
           </button>
           <button
@@ -398,7 +505,13 @@ export default function FileBrowser({
         {searchResults !== null && (
           <span className="search-count">
             找到 {searchResults.length} 个结果
-            <button className="btn btn-xs" onClick={() => { setSearchQuery(""); setSearchResults(null); }}>
+            <button
+              className="btn btn-xs"
+              onClick={() => {
+                setSearchQuery("");
+                setSearchResults(null);
+              }}
+            >
               清除
             </button>
           </span>
@@ -407,30 +520,39 @@ export default function FileBrowser({
 
       {searchResults !== null ? (
         searchResults.length === 0 ? (
-          <div className="empty-state"><p>未找到匹配的文件</p></div>
+          <div className="empty-state">
+            <p>未找到匹配的文件</p>
+          </div>
         ) : (
           <div className="file-table-wrapper">
-          <table className="file-table">
-            <thead>
-              <tr>
-                <th className="col-name">名称</th>
-                <th className="col-size">大小</th>
-                <th className="col-time">修改时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {searchResults.map((entry) => (
-                <tr key={entry.name} className={entry.is_dir ? "row-dir" : "row-file"}>
-                  <td className="cell-name">
-                    <span className="file-icon">{fileIcon(entry.name, entry.is_dir)}</span>
-                    {entry.name}
-                  </td>
-                  <td className="cell-size">{formatFileSize(entry.size)}</td>
-                  <td className="cell-time">{formatTime(entry.modified_at)}</td>
+            <table className="file-table">
+              <thead>
+                <tr>
+                  <th className="col-name">名称</th>
+                  <th className="col-size">大小</th>
+                  <th className="col-time">修改时间</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {searchResults.map((entry) => (
+                  <tr
+                    key={entry.name}
+                    className={entry.is_dir ? "row-dir" : "row-file"}
+                  >
+                    <td className="cell-name">
+                      <span className="file-icon">
+                        {fileIcon(entry.name, entry.is_dir)}
+                      </span>
+                      {entry.name}
+                    </td>
+                    <td className="cell-size">{formatFileSize(entry.size)}</td>
+                    <td className="cell-time">
+                      {formatTime(entry.modified_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )
       ) : loading ? (
@@ -444,90 +566,94 @@ export default function FileBrowser({
         </div>
       ) : (
         <>
-        <div className="file-table-wrapper">
-        <table className="file-table">
-          <thead>
-            <tr>
-              <th className="col-select"></th>
-              <th className="col-name">名称</th>
-              <th className="col-size">大小</th>
-              <th className="col-time">修改时间</th>
-              <th className="col-action">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr
-                key={entry.name}
-                className={entry.is_dir ? "row-dir" : "row-file"}
-                draggable={!entry.is_dir}
-                onDoubleClick={() => handleNavigate(entry)}
-                onDragStart={(e) => handleFileDragStart(e, entry)}
-                onDragEnd={handleFileDragEnd}
-              >
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.has(entry.name)}
-                    onChange={() => toggleSelect(entry.name)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </td>
-                <td
-                  className="cell-name"
-                  onClick={() => handleNavigate(entry)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && handleNavigate(entry)
-                  }
-                >
-                  <span className="file-icon">
-                    {fileIcon(entry.name, entry.is_dir)}
-                  </span>
-                  {entry.name}
-                </td>
-                <td className="cell-size">{formatFileSize(entry.size)}</td>
-                <td className="cell-time">{formatTime(entry.modified_at)}</td>
-                <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                  {!entry.is_dir && (
-                    <>
-                    <button
-                      className="btn btn-xs btn-primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(entry);
-                      }}
+          <div className="file-table-wrapper">
+            <table className="file-table">
+              <thead>
+                <tr>
+                  <th className="col-select"></th>
+                  <th className="col-name">名称</th>
+                  <th className="col-size">大小</th>
+                  <th className="col-time">修改时间</th>
+                  <th className="col-action">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr
+                    key={entry.name}
+                    className={entry.is_dir ? "row-dir" : "row-file"}
+                    draggable={!entry.is_dir}
+                    onDoubleClick={() => handleNavigate(entry)}
+                    onDragStart={(e) => handleFileDragStart(e, entry)}
+                    onDragEnd={handleFileDragEnd}
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(entry.name)}
+                        onChange={() => toggleSelect(entry.name)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td
+                      className="cell-name"
+                      onClick={() => handleNavigate(entry)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleNavigate(entry)
+                      }
                     >
-                      下载
-                    </button>
-                    <button
-                      className="btn btn-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleShareFile(entry);
-                      }}
-                      title="复制分享链接到剪贴板"
-                    >
-                      分享
-                    </button>
-                    </>
-                  )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-        {hasMore && (
-          <div style={{ textAlign: "center", padding: "12px" }}>
-            <button className="btn" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? "加载中..." : `加载更多 (已加载 ${entries.length}+)`}
-            </button>
+                      <span className="file-icon">
+                        {fileIcon(entry.name, entry.is_dir)}
+                      </span>
+                      {entry.name}
+                    </td>
+                    <td className="cell-size">{formatFileSize(entry.size)}</td>
+                    <td className="cell-time">
+                      {formatTime(entry.modified_at)}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {!entry.is_dir && (
+                          <>
+                            <button
+                              className="btn btn-xs btn-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(entry);
+                              }}
+                            >
+                              下载
+                            </button>
+                            <button
+                              className="btn btn-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShareFile(entry);
+                              }}
+                              title="复制分享链接到剪贴板"
+                            >
+                              分享
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+          {hasMore && (
+            <div style={{ textAlign: "center", padding: "12px" }}>
+              <button className="btn" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore
+                  ? "加载中..."
+                  : `加载更多 (已加载 ${entries.length}+)`}
+              </button>
+            </div>
+          )}
         </>
       )}
 

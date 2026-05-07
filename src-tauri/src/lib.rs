@@ -2,6 +2,7 @@ mod config;
 mod discovery;
 mod error;
 mod log;
+mod remote;
 mod security;
 mod server;
 mod transfer;
@@ -18,8 +19,10 @@ use server::ws::{ChatStore, WsConnectionTracker, WsMessage};
 use transfer::queue::{TransferDirection, TransferManager, TransferTask, TransferStatus};
 use transfer::download;
 use transfer::upload;
+use remote::{ClipboardSync, ScreenRecorder};
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use tauri::{Emitter, Manager};
 use tokio::sync::{broadcast, Mutex};
@@ -43,6 +46,12 @@ struct AppState {
     ws_tx: broadcast::Sender<WsMessage>,
     /// WebSocket 连接跟踪器
     ws_tracker: WsConnectionTracker,
+    /// 远程控制停止信号
+    remote_control_stop: Arc<AtomicBool>,
+    /// HTTP 服务器共享的设备发现列表
+    discovered_devices: Arc<RwLock<Vec<DeviceInfo>>>,
+    /// 屏幕录制器
+    screen_recorder: ScreenRecorder,
 }
 
 fn local_ip_address() -> String {
@@ -137,9 +146,36 @@ async fn start_discovery(app: tauri::AppHandle) -> Result<(), AppError> {
             match event {
                 discovery::DeviceEvent::Found(device) => {
                     let _ = app_handle.emit("device-found", &device);
+                    let state = app_handle.state::<AppState>();
+                    state.ws_tracker.register(device.id.clone()).await;
+                    let _ = state.ws_tx.send(WsMessage::DeviceStatus {
+                        device_id: device.id.clone(),
+                        online: true,
+                    });
+                    // 更新共享设备发现列表
+                    {
+                        let mut devices = state.discovered_devices.write().unwrap();
+                        if let Some(existing) = devices.iter_mut().find(|d| d.id == device.id) {
+                            existing.ip = device.ip.clone();
+                            existing.port = device.port;
+                        } else {
+                            devices.push(device.clone());
+                        }
+                    }
                 }
                 discovery::DeviceEvent::Lost(device_id) => {
                     let _ = app_handle.emit("device-lost", &device_id);
+                    let state = app_handle.state::<AppState>();
+                    state.ws_tracker.unregister(&device_id).await;
+                    let _ = state.ws_tx.send(WsMessage::DeviceStatus {
+                        device_id: device_id.clone(),
+                        online: false,
+                    });
+                    // 从发现列表中移除
+                    {
+                        let mut devices = state.discovered_devices.write().unwrap();
+                        devices.retain(|d| d.id != device_id);
+                    }
                 }
             }
         }
@@ -711,10 +747,13 @@ async fn get_trusted_devices(app: tauri::AppHandle) -> Result<Vec<String>, AppEr
 #[tauri::command]
 async fn get_trusted_device_list(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, AppError> {
     let state = app.state::<AppState>();
+    let my_id = &state.device_id;
     let devices = state.pairing.trusted_devices().await;
-    let result: Vec<serde_json::Value> = devices.into_iter().map(|(id, entry)| {
-        serde_json::json!({"id": id, "name": entry.name, "nickname": entry.nickname, "paired_at": entry.paired_at})
-    }).collect();
+    let result: Vec<serde_json::Value> = devices.into_iter()
+        .filter(|(id, _)| id != my_id)
+        .map(|(id, entry)| {
+            serde_json::json!({"id": id, "name": entry.name, "nickname": entry.nickname, "paired_at": entry.paired_at})
+        }).collect();
     Ok(result)
 }
 
@@ -915,6 +954,128 @@ async fn set_device_nickname(app: tauri::AppHandle, device_id: String, nickname:
 async fn get_online_device_ids(app: tauri::AppHandle) -> Result<Vec<String>, AppError> {
     let state = app.state::<AppState>();
     Ok(state.ws_tracker.get_online_devices().await)
+}
+
+// ==================== Remote Control Commands ====================
+
+/// 连接远程设备的 MJPEG 屏幕流，通过 Tauri 事件中继帧到前端
+#[tauri::command]
+async fn start_remote_control(
+    app: tauri::AppHandle,
+    target_ip: String,
+    target_port: u16,
+) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let device_id = state.device_id.clone();
+    state.remote_control_stop.store(false, Ordering::SeqCst);
+    let stop_flag = state.remote_control_stop.clone();
+
+    let url = format!(
+        "https://{}:{}/remote/screen/stream?device_id={}",
+        target_ip, target_port, device_id
+    );
+
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let app_clone = app.clone();
+    tokio::spawn(async move {
+        match client.get(&url).send().await {
+            Ok(response) => {
+                let app_for_relay = app_clone.clone();
+                crate::remote::relay_mjpeg_stream(response, app_for_relay, stop_flag).await;
+            }
+            Err(e) => {
+                let _ = app_clone.emit(
+                    "remote-screen-error",
+                    serde_json::json!({"error": format!("连接失败: {}", e)}),
+                );
+            }
+        }
+        // 流结束
+        let _ = app_clone.emit("remote-screen-ended", serde_json::json!({}));
+    });
+
+    Ok(())
+}
+
+/// 停止远程控制会话
+#[tauri::command]
+async fn stop_remote_control(app: tauri::AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    state.remote_control_stop.store(true, Ordering::SeqCst);
+    let _ = app.emit("remote-screen-ended", serde_json::json!({}));
+    Ok(())
+}
+
+/// 测试本地屏幕捕获 —— 返回 base64 JPEG（用于验证权限和功能）
+#[tauri::command]
+async fn test_screen_capture() -> Result<String, String> {
+    use base64::Engine;
+    let frame = crate::remote::capture_screen_jpeg(crate::remote::DEFAULT_JPEG_QUALITY, crate::remote::DEFAULT_SCALE)?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(&frame.jpeg_data))
+}
+
+/// 开始屏幕录制
+#[tauri::command]
+async fn start_recording(app: tauri::AppHandle) -> Result<String, String> {
+    let state = app.state::<AppState>();
+    let settings = state.settings.lock().await;
+    let download_dir = settings.download_dir.clone();
+    drop(settings);
+
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let output_path = std::path::PathBuf::from(&download_dir)
+        .join(format!("remote_recording_{}.avi", timestamp));
+
+    state.screen_recorder.start(output_path.clone())
+        .map_err(|e| format!("开始录制失败: {}", e))?;
+
+    tracing::info!("开始屏幕录制: {:?}", output_path);
+    Ok(output_path.to_string_lossy().to_string())
+}
+
+/// 停止屏幕录制
+#[tauri::command]
+async fn stop_recording(app: tauri::AppHandle) -> Result<String, String> {
+    let state = app.state::<AppState>();
+    let path = state.screen_recorder.stop()
+        .map_err(|e| format!("停止录制失败: {}", e))?;
+    tracing::info!("录制保存至: {:?}", path);
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// 获取录制状态
+#[tauri::command]
+async fn get_recording_status(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let state = app.state::<AppState>();
+    let duration = state.screen_recorder.duration();
+    let frames = state.screen_recorder.frame_count();
+    Ok(serde_json::json!({
+        "duration": duration,
+        "frames": frames,
+        "is_recording": duration > 0.0
+    }))
+}
+
+/// 检测 macOS 权限状态
+#[tauri::command]
+fn check_permissions() -> crate::remote::PermissionStatus {
+    crate::remote::check_permissions()
+}
+
+/// 打开屏幕录制隐私设置
+#[tauri::command]
+fn open_screen_recording_settings() {
+    crate::remote::open_screen_recording_settings();
+}
+
+/// 打开辅助功能隐私设置
+#[tauri::command]
+fn open_accessibility_settings() {
+    crate::remote::open_accessibility_settings();
 }
 
 #[tauri::command]
@@ -1171,6 +1332,17 @@ pub fn run() {
             let ws_tracker = WsConnectionTracker::new();
             let ws_tracker_for_http = ws_tracker.clone();
 
+            // 剪贴板同步服务
+            let clipboard_sync = ClipboardSync::new().unwrap_or_else(|e| {
+                tracing::error!("剪贴板同步初始化失败: {}", e);
+                ClipboardSync::default()
+            });
+            let clipboard_sync_for_http = clipboard_sync.clone();
+
+            // 屏幕录制器
+            let screen_recorder = ScreenRecorder::new();
+            let screen_recorder_for_http = screen_recorder.clone();
+
             // 配对管理器：从设置加载信任列表（含名称），并自动信任本机设备
             let mut pairing_mgr = PairingManager::from_settings(
                 &settings.trusted_devices,
@@ -1188,6 +1360,9 @@ pub fn run() {
             let chat_store_for_tui = chat_messages.clone();
             let ws_tx_for_tui = ws_tx.clone();
 
+            // 共享设备发现列表（同时被 Tauri 和 HTTP 服务器使用）
+            let discovered_devices = Arc::new(RwLock::new(Vec::new()));
+
             let state = AppState {
                 settings: Mutex::new(settings.clone()),
                 discovery: Arc::new(discovery),
@@ -1201,6 +1376,9 @@ pub fn run() {
                 chat_store: chat_store_for_tui,
                 ws_tx: ws_tx_for_tui,
                 ws_tracker: ws_tracker.clone(),
+                remote_control_stop: Arc::new(AtomicBool::new(false)),
+                discovered_devices: discovered_devices.clone(),
+                screen_recorder,
             };
 
             // 恢复或生成配对码
@@ -1233,16 +1411,23 @@ pub fn run() {
 
             app.manage(state);
 
+            // 将本机设备注册到在线跟踪器（标记为在线）
+            let wt_self = ws_tracker.clone();
+            let did_self = device_id.clone();
+            tauri::async_runtime::spawn(async move {
+                wt_self.register(did_self).await;
+            });
+
             // 订阅 WebSocket 广播，实时转发传输进度 + 聊天消息到前端
             let progress_tx = ws_tx.subscribe();
-            let progress_app = app.handle().clone();
+            let _progress_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let mut rx = progress_tx;
                 while let Ok(msg) = rx.recv().await {
                     match &msg {
                         WsMessage::TransferProgress { id, file_name, bytes_transferred, total_bytes, speed } => {
                             if *bytes_transferred < *total_bytes {
-                                let _ = progress_app.emit("transfer-progress", serde_json::json!({
+                                let _ = _progress_app.emit("transfer-progress", serde_json::json!({
                                     "id": id,
                                     "file_name": file_name,
                                     "bytes_transferred": bytes_transferred,
@@ -1252,20 +1437,20 @@ pub fn run() {
                             }
                         }
                         WsMessage::TransferComplete { id, file_name } => {
-                            let _ = progress_app.emit("transfer-complete", serde_json::json!({
+                            let _ = _progress_app.emit("transfer-complete", serde_json::json!({
                                 "id": id,
                                 "file_name": file_name,
                             }));
                         }
                         WsMessage::TransferError { id, file_name, error } => {
-                            let _ = progress_app.emit("transfer-error", serde_json::json!({
+                            let _ = _progress_app.emit("transfer-error", serde_json::json!({
                                 "id": id,
                                 "file_name": file_name,
                                 "error": error,
                             }));
                         }
                         WsMessage::ChatMessage { from_id, from_name, text, timestamp, message_type, file_name, file_size, file_id, file_type, to_id } => {
-                            let _ = progress_app.emit("chat-message", serde_json::json!({
+                            let _ = _progress_app.emit("chat-message", serde_json::json!({
                                 "from_id": from_id,
                                 "from_name": from_name,
                                 "text": text,
@@ -1279,11 +1464,13 @@ pub fn run() {
                             }));
                         }
                         WsMessage::DeviceStatus { device_id, online } => {
-                            let _ = progress_app.emit("device-status", serde_json::json!({
+                            let _ = _progress_app.emit("device-status", serde_json::json!({
                                 "device_id": device_id,
                                 "online": online,
                             }));
                         }
+                        // 远程控制消息暂不处理（由专门的 Tauri 命令处理）
+                        _ => {}
                     }
                 }
             });
@@ -1309,10 +1496,11 @@ pub fn run() {
             let app_handle = app.handle().clone();
             let ws_tracker_for_build = ws_tracker_for_http.clone();
 
+            let device_id_for_http = device_id.clone();
             tauri::async_runtime::spawn(async move {
                 // 首次创建 router（之后每次 re-bind 复用 router 即可）
                 let router = server::http::build_router(
-                    share_dir_for_http, tm, ws_tx, pairing, require_pairing, chat_messages.clone(), ws_tracker_for_build,
+                    share_dir_for_http, tm, ws_tx, pairing, require_pairing, chat_messages.clone(), ws_tracker_for_build, device_id_for_http, discovered_devices.clone(), clipboard_sync_for_http, screen_recorder_for_http,
                 );
 
                 let mut port_rx = port_watch_rx;
@@ -1401,6 +1589,15 @@ pub fn run() {
             send_chat_message,
             set_device_nickname,
             get_online_device_ids,
+            start_remote_control,
+            stop_remote_control,
+            test_screen_capture,
+            start_recording,
+            stop_recording,
+            get_recording_status,
+            check_permissions,
+            open_screen_recording_settings,
+            open_accessibility_settings,
             send_chat_file,
             download_chat_file,
             open_file,

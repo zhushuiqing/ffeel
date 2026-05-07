@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && if echo \"$FILE\" | grep -qE '(\\.env|\\.lock|secrets\\.yaml|credentials)'; then echo \"BLOCKED: Cannot modify protected file: $FILE\" >&2; exit 2; fi",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && if echo \"$FILE\" | grep -qE '(\\.env|\\.lock|secrets\\.yaml|credentials)'; then echo \"拦截：禁止修改受保护文件: $FILE\" >&2; exit 2; fi",
             "timeout": 5000
           }
         ]
@@ -21,7 +21,7 @@
           },
           {
             "type": "command",
-            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qEi '(rm\\s+-rf\\s+/\\s*$|rm\\s+-rf\\s+/\\*|sudo\\s+rm\\s+-rf|DROP\\s+TABLE|DROP\\s+DATABASE)'; then echo \"BLOCKED: Dangerous command detected\" >&2; exit 2; fi"
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -qEi '(rm\\s+-rf\\s+/\\s*$|rm\\s+-rf\\s+/\\*|sudo\\s+rm\\s+-rf|DROP\\s+TABLE|DROP\\s+DATABASE)'; then echo \"拦截：检测到危险命令\" >&2; exit 2; fi"
           },
           {
             "type": "command",
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude needs your attention\" with title \"Claude Code\"'"
+            "command": "osascript -e 'display notification \"Claude 需要你关注\" with title \"Claude Code\"'"
           }
         ]
       }

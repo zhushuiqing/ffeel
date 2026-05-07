@@ -79,6 +79,28 @@ export interface ChatEntry {
   to_id?: string;
 }
 
+export interface RemoteScreenFrame {
+  data: string; // base64 JPEG
+  frame: number;
+  fps: number;
+}
+
+export interface MonitorInfo {
+  id: number;
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  is_primary: boolean;
+}
+
+export interface PermissionStatus {
+  screen_recording: boolean;
+  accessibility: boolean;
+  all_granted: boolean;
+}
+
 export interface Settings {
   share_dir: string;
   port: number;
