@@ -1371,6 +1371,7 @@ mod tests {
             "test-device".to_string(),
             Arc::new(RwLock::new(Vec::new())),
             ClipboardSync::new().unwrap(),
+            crate::remote::ScreenRecorder::new(),
         );
 
         let (cert_pem, key_pem) = test_cert();
