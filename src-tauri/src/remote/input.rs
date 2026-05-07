@@ -95,14 +95,14 @@ pub fn handle_input_event(event: &InputEvent) -> Result<(), String> {
                 let keys: Vec<&str> = keys_str.split(',').collect();
                 // 先按下所有键
                 for k in &keys {
-                    let key = parse_key(*k);
+                    let key = parse_key(k);
                     enigo
                         .key(key, Direction::Press)
                         .map_err(|e| format!("快捷键按下失败: {}", e))?;
                 }
                 // 再释放所有键（逆序）
                 for k in keys.iter().rev() {
-                    let key = parse_key(*k);
+                    let key = parse_key(k);
                     enigo
                         .key(key, Direction::Release)
                         .map_err(|e| format!("快捷键释放失败: {}", e))?;

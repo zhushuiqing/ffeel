@@ -75,6 +75,7 @@ fn local_ip_address() -> String {
 // ==================== Tauri Commands ====================
 
 /// 共享的下载循环逻辑（供 download_file 和 resume_download 复用）
+#[allow(clippy::too_many_arguments)]
 async fn run_download_loop(
     app: tauri::AppHandle,
     tm: Arc<Mutex<TransferManager>>,
@@ -434,7 +435,7 @@ async fn download_directory(
                 let mgr = tm.lock().await;
                 let tasks = mgr.list_tasks();
                 let task = tasks.iter().find(|t| t.id == task_id);
-                if task.map_or(false, |t| t.status == TransferStatus::Cancelled) {
+                if task.is_some_and(|t| t.status == TransferStatus::Cancelled) {
                     return;
                 }
             }
@@ -794,7 +795,7 @@ async fn untrust_device(app: tauri::AppHandle, device_id: String) -> Result<(), 
 async fn get_pairing_code(app: tauri::AppHandle) -> Result<String, AppError> {
     let state = app.state::<AppState>();
     let code = state.pairing.get_current_code().await;
-    Ok(code.unwrap_or_else(|| PairingManager::generate_pairing_code()))
+    Ok(code.unwrap_or_else(PairingManager::generate_pairing_code))
 }
 
 #[tauri::command]
@@ -1424,6 +1425,7 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let mut rx = progress_tx;
                 while let Ok(msg) = rx.recv().await {
+                    #[allow(clippy::collapsible_match)]
                     match &msg {
                         WsMessage::TransferProgress { id, file_name, bytes_transferred, total_bytes, speed } => {
                             if *bytes_transferred < *total_bytes {
@@ -1476,7 +1478,7 @@ pub fn run() {
             });
 
             // 初始化系统托盘
-            if let Err(e) = tray::build_tray(&app) {
+            if let Err(e) = tray::build_tray(app) {
                 tracing::error!("系统托盘初始化失败: {}", e);
             }
 

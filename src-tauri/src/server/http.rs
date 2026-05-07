@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Path, Query, Request, State},
+    extract::{Path as AxumPath, Query, Request, State},
     http::{HeaderMap, HeaderValue, Response, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Json},
@@ -10,7 +10,7 @@ use axum::{
 use std::convert::TryFrom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex};
@@ -100,6 +100,7 @@ pub struct AppState {
 }
 
 /// 构建 HTTP 路由
+#[allow(clippy::too_many_arguments)]
 pub fn build_router(
     share_dir: Arc<RwLock<PathBuf>>,
     transfer_manager: Arc<Mutex<TransferManager>>,
@@ -419,7 +420,7 @@ async fn upload_file(
 
     let filename = query.name.unwrap_or_else(|| "upload".to_string());
     // 消毒文件名，防止路径穿越
-    let filename = filename.replace("..", "").replace('/', "_").replace('\\', "_");
+    let filename = filename.replace("..", "").replace(['/', '\\'], "_");
     let save_path = target_dir.join(&filename);
 
     let mut file = tokio::fs::File::create(&save_path).await.map_err(|e| {
@@ -524,7 +525,7 @@ async fn health_check() -> Json<serde_json::value::Value> {
 /// URL: /s/:code/*path
 async fn share_download_handler(
     State(state): State<AppState>,
-    Path((code, path)): Path<(String, String)>,
+    AxumPath((code, path)): AxumPath<(String, String)>,
 ) -> Result<impl IntoResponse, AppErrorResponse> {
     let current_code = state.pairing.get_current_code().await;
     match current_code {
@@ -583,7 +584,7 @@ async fn list_transfers_handler(
 /// 暂停传输
 async fn pause_transfer_handler(
     State(state): State<AppState>,
-    Path(param): Path<TransferIdParam>,
+    AxumPath(param): AxumPath<TransferIdParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let mut tm = state.transfer_manager.lock().await;
     tm.pause_task(&param.id).map_err(|e| {
@@ -595,7 +596,7 @@ async fn pause_transfer_handler(
 /// 恢复传输
 async fn resume_transfer_handler(
     State(state): State<AppState>,
-    Path(param): Path<TransferIdParam>,
+    AxumPath(param): AxumPath<TransferIdParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let mut tm = state.transfer_manager.lock().await;
     tm.resume_task(&param.id).map_err(|e| {
@@ -607,7 +608,7 @@ async fn resume_transfer_handler(
 /// 取消传输
 async fn cancel_transfer_handler(
     State(state): State<AppState>,
-    Path(param): Path<TransferIdParam>,
+    AxumPath(param): AxumPath<TransferIdParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let mut tm = state.transfer_manager.lock().await;
     tm.cancel_task(&param.id);
@@ -664,7 +665,7 @@ async fn list_trusted_devices_handler(
 /// 移除信任设备
 async fn remove_trusted_device_handler(
     State(state): State<AppState>,
-    Path(param): Path<TrustedDeviceParam>,
+    AxumPath(param): AxumPath<TrustedDeviceParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     state.pairing.untrust_device(&param.id).await;
     // 持久化到磁盘
@@ -677,7 +678,7 @@ async fn remove_trusted_device_handler(
 /// 设置设备昵称
 async fn set_device_nickname_handler(
     State(state): State<AppState>,
-    Path(param): Path<TrustedDeviceParam>,
+    AxumPath(param): AxumPath<TrustedDeviceParam>,
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let nickname = body.get("nickname").and_then(|v| v.as_str()).unwrap_or("");
@@ -828,7 +829,7 @@ async fn upload_chat_file_handler(
     let file_type = query.file_type.unwrap_or_else(|| "application/octet-stream".to_string());
     let to_id = query.to_id;
 
-    let safe_name = file_name.replace("..", "").replace('/', "_").replace('\\', "_");
+    let safe_name = file_name.replace("..", "").replace(['/', '\\'], "_");
     let file_id = {
         let mut rng = rand::thread_rng();
         format!("cf{:016x}", rng.gen::<u64>())
@@ -886,7 +887,7 @@ async fn upload_chat_file_handler(
 /// 下载聊天文件
 async fn download_chat_file_handler(
     State(state): State<AppState>,
-    Path(file_id): Path<String>,
+    AxumPath(file_id): AxumPath<String>,
 ) -> Result<impl IntoResponse, AppErrorResponse> {
     let base = state.share_dir.read().unwrap().clone();
     let file_dir = base.join(".chat_files").join(&file_id);
@@ -1022,7 +1023,7 @@ async fn remote_screen_proxy_handler(
     let body = Body::from_stream(upstream_body.map(|result| {
         result
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                Box::new(std::io::Error::other(e.to_string()))
             })
     }));
 
@@ -1069,10 +1070,10 @@ async fn web_ui_handler() -> impl IntoResponse {
 }
 
 /// 安全地解析路径，防止目录遍历攻击
-fn resolve_safe_path(base: &PathBuf, rel_path: &str) -> Result<PathBuf, AppErrorResponse> {
+fn resolve_safe_path(base: &Path, rel_path: &str) -> Result<PathBuf, AppErrorResponse> {
     let clean = rel_path.trim_start_matches('/').trim_start_matches('\\');
     let target = if clean.is_empty() {
-        base.clone()
+        base.to_path_buf()
     } else {
         base.join(clean)
     };

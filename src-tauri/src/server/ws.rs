@@ -211,6 +211,7 @@ impl ChatStore {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn add_message(
         &self,
         from_id: String,
@@ -383,14 +384,11 @@ async fn handle_ws_connection(
                 }
             }
             Ok(msg) = rx.recv() => {
-                match &msg {
-                    WsMessage::ChatMessage { .. } => {
-                        tracing::trace!("WebSocket 转发 ChatMessage");
-                    }
-                    _ => {}
+                if let WsMessage::ChatMessage { .. } = &msg {
+                    tracing::trace!("WebSocket 转发 ChatMessage");
                 }
                 if let Ok(text) = serde_json::to_string(&msg) {
-                    if sender.send(Message::Text(text.into())).await.is_err() {
+                    if sender.send(Message::Text(text)).await.is_err() {
                         break;
                     }
                 }

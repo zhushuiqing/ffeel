@@ -208,7 +208,7 @@ impl ScreenRecorder {
         avi.extend_from_slice(&1u16.to_le_bytes()); // biPlanes
         avi.extend_from_slice(&24u16.to_le_bytes()); // biBitCount
         avi.extend_from_slice(b"MJPG"); // biCompression
-        avi.extend_from_slice(&(width as u32 * height as u32 * 3).to_le_bytes()); // biSizeImage
+        avi.extend_from_slice(&(width * height * 3).to_le_bytes()); // biSizeImage
         avi.extend_from_slice(&0u32.to_le_bytes()); // biXPelsPerMeter
         avi.extend_from_slice(&0u32.to_le_bytes()); // biYPelsPerMeter
         avi.extend_from_slice(&0u32.to_le_bytes()); // biClrUsed

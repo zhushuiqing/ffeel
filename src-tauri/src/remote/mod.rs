@@ -56,14 +56,14 @@ pub fn capture_screen_jpeg(quality: u8, scale: f32) -> Result<ScreenFrame, Strin
         let new_height = (img.height() as f32 * scale) as u32;
         let resized = image::imageops::resize(&img, new_width, new_height, image::imageops::FilterType::Triangle);
         // 快速 RGBA → RGB 转换
-        let rgb: Vec<u8> = resized.as_raw().chunks(4).map(|c| [c[0], c[1], c[2]].to_vec()).flatten().collect();
+        let rgb: Vec<u8> = resized.as_raw().chunks(4).flat_map(|c| [c[0], c[1], c[2]]).collect();
         let rgb_img = image::RgbImage::from_raw(new_width, new_height, rgb)
             .ok_or_else(|| "Failed to create RgbImage".to_string())?;
         (new_width, new_height, rgb_img)
     } else {
         let width = img.width();
         let height = img.height();
-        let rgb: Vec<u8> = img.as_raw().chunks(4).map(|c| [c[0], c[1], c[2]].to_vec()).flatten().collect();
+        let rgb: Vec<u8> = img.as_raw().chunks(4).flat_map(|c| [c[0], c[1], c[2]]).collect();
         let rgb_img = image::RgbImage::from_raw(width, height, rgb)
             .ok_or_else(|| "Failed to create RgbImage".to_string())?;
         (width, height, rgb_img)
@@ -221,6 +221,7 @@ pub async fn relay_mjpeg_stream(
         buf.extend_from_slice(&chunk);
 
         // Extract frames from buffer
+        #[allow(clippy::while_let_loop)]
         loop {
             let boundary_pos = match buf
                 .windows(boundary.len())

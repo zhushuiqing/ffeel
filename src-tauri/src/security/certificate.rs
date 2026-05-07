@@ -1,11 +1,11 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 pub struct CertificateManager;
 
 impl CertificateManager {
     /// 从磁盘加载证书，若不存在则生成新的自签名证书
     /// 返回 (cert_pem, key_pem)
-    pub fn load_or_create(config_dir: &PathBuf) -> Result<(String, String), String> {
+    pub fn load_or_create(config_dir: &Path) -> Result<(String, String), String> {
         let cert_path = config_dir.join("cert.pem");
         let key_path = config_dir.join("key.pem");
 

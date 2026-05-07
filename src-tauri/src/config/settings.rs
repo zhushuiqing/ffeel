@@ -99,7 +99,7 @@ fn download_dir_default() -> PathBuf {
 
 fn dirs_or_default() -> PathBuf {
     dirs::document_dir()
-        .or_else(|| dirs::home_dir())
+        .or_else(dirs::home_dir)
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
