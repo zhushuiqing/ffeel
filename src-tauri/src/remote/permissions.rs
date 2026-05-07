@@ -48,6 +48,7 @@ fn check_screen_recording_permission() -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 fn check_screen_recording_permission() -> bool {
     true
 }
@@ -62,6 +63,7 @@ fn check_accessibility_permission() -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 fn check_accessibility_permission() -> bool {
     true
 }
@@ -91,6 +93,7 @@ pub fn open_accessibility_settings() {}
 
 /// 打开系统设置的隐私面板（通用）
 #[cfg(target_os = "macos")]
+#[allow(dead_code)]
 pub fn open_privacy_settings() {
     let _ = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy")
@@ -98,4 +101,5 @@ pub fn open_privacy_settings() {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 pub fn open_privacy_settings() {}

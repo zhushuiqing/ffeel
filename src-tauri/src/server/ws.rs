@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{broadcast, Mutex, RwLock};
 
-use crate::remote::{ClipboardSync, InputEvent};
+use crate::remote::ClipboardSync;
 use crate::server::http::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,6 +149,7 @@ impl WsConnectionTracker {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn is_online(&self, device_id: &str) -> bool {
         self.inner.read().await.contains_key(device_id)
     }
@@ -196,6 +197,7 @@ impl ChatStore {
     }
 
     /// 保存到磁盘
+    #[allow(dead_code)]
     pub async fn save_to_disk(&self) {
         let path = self.persist_path.lock().await.clone();
         if let Some(path) = path {
@@ -251,6 +253,7 @@ impl ChatStore {
         self.messages.lock().await.clone()
     }
 
+    #[allow(dead_code)]
     pub async fn clear(&self) {
         self.messages.lock().await.clear();
     }

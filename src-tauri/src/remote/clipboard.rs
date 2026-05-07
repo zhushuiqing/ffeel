@@ -24,6 +24,7 @@ impl ClipboardSync {
     }
 
     /// 获取剪贴板文本内容
+    #[allow(dead_code)]
     pub async fn get_text(&self) -> Result<String, String> {
         let mut clipboard = self.clipboard.lock().await;
         clipboard
@@ -43,6 +44,7 @@ impl ClipboardSync {
     }
 
     /// 获取剪贴板变化通知接收器
+    #[allow(dead_code)]
     pub fn subscribe(&self) -> broadcast::Receiver<String> {
         self.change_tx.subscribe()
     }

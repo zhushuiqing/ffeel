@@ -10,10 +10,9 @@ pub use clipboard::ClipboardSync;
 pub use display::{get_monitors, MonitorInfo};
 pub use input::{handle_input_event, InputEvent};
 pub use permissions::{
-    check_permissions, open_accessibility_settings, open_privacy_settings,
-    open_screen_recording_settings, PermissionStatus,
+    check_permissions, open_accessibility_settings, open_screen_recording_settings, PermissionStatus,
 };
-pub use recording::{RecordingState, ScreenRecorder};
+pub use recording::ScreenRecorder;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -29,6 +28,7 @@ pub const DEFAULT_FPS: u32 = 5;
 pub const DEFAULT_SCALE: f32 = 0.3;
 
 /// Captured screen frame data
+#[allow(dead_code)]
 pub struct ScreenFrame {
     pub jpeg_data: Vec<u8>,
     pub width: u32,

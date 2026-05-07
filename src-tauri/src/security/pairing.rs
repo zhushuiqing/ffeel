@@ -21,6 +21,7 @@ pub struct PairingManager {
 }
 
 impl PairingManager {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             devices: HashMap::new(),
@@ -29,6 +30,7 @@ impl PairingManager {
     }
 
     /// 从信任设备 ID 列表加载（兼容旧格式）
+    #[allow(dead_code)]
     pub fn from_ids(ids: &[String]) -> Self {
         let mut devices = HashMap::new();
         for id in ids {
@@ -139,6 +141,7 @@ impl PairingManager {
     }
 
     /// 获取设备显示名称（昵称>名称>ID片段）
+    #[allow(dead_code)]
     pub fn get_display_name(&self, device_id: &str) -> String {
         self.devices.get(device_id).map(|entry| {
             entry.nickname.clone().unwrap_or_else(|| entry.name.clone())
@@ -156,6 +159,7 @@ impl PairingManager {
     }
 
     /// 更新设备名称（当设备重新连接时更新其名称）
+    #[allow(dead_code)]
     pub fn update_name(&mut self, device_id: &str, name: &str) {
         if let Some(entry) = self.devices.get_mut(device_id) {
             entry.name = name.to_string();
@@ -177,6 +181,7 @@ impl PairingManager {
     }
 
     /// 获取当前配对码的引用
+    #[allow(dead_code)]
     pub fn get_code(&self) -> Option<&str> {
         self.current_code.as_deref()
     }
@@ -187,6 +192,7 @@ impl PairingManager {
     }
 
     /// 验证配对码并信任设备（旧版）
+    #[allow(dead_code)]
     pub fn verify_and_trust(&mut self, device_id: &str, code: &str) -> bool {
         self.verify_and_trust_with_name(device_id, code, "未知设备")
     }
@@ -215,6 +221,7 @@ pub struct SharedPairingManager {
 }
 
 impl SharedPairingManager {
+    #[allow(dead_code)]
     pub fn new(manager: PairingManager) -> Self {
         Self {
             inner: Arc::new(Mutex::new(manager)),
@@ -247,6 +254,7 @@ impl SharedPairingManager {
     }
 
     /// 获取设备显示名称
+    #[allow(dead_code)]
     pub async fn get_display_name(&self, device_id: &str) -> String {
         self.inner.lock().await.get_display_name(device_id)
     }
@@ -257,6 +265,7 @@ impl SharedPairingManager {
     }
 
     /// 更新设备名称
+    #[allow(dead_code)]
     pub async fn update_name(&self, device_id: &str, name: &str) {
         self.inner.lock().await.update_name(device_id, name);
     }
@@ -282,6 +291,7 @@ impl SharedPairingManager {
     }
 
     /// 同步版本，用于非 async 上下文（如 Tauri setup 闭包）
+    #[allow(dead_code)]
     pub fn rotate_code_sync(&self) -> String {
         self.inner.blocking_lock().rotate_code()
     }
@@ -294,6 +304,7 @@ impl SharedPairingManager {
         self.inner.lock().await.get_current_code()
     }
 
+    #[allow(dead_code)]
     pub async fn verify_and_trust(&self, device_id: &str, code: &str) -> bool {
         self.inner.lock().await.verify_and_trust(device_id, code)
     }
