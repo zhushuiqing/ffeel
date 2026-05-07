@@ -14,8 +14,7 @@ pub struct ClipboardSync {
 impl ClipboardSync {
     /// 创建新的剪贴板同步服务
     pub fn new() -> Result<Self, String> {
-        let clipboard = Clipboard::new()
-            .map_err(|e| format!("剪贴板初始化失败: {}", e))?;
+        let clipboard = Clipboard::new().map_err(|e| format!("剪贴板初始化失败: {}", e))?;
         let (change_tx, _) = broadcast::channel::<String>(16);
         Ok(Self {
             clipboard: Arc::new(Mutex::new(clipboard)),

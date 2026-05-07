@@ -44,11 +44,17 @@ impl ScreenRecorder {
         frames.clear();
         drop(frames);
 
-        let mut start_time = self.start_time.lock().map_err(|e| format!("锁错误: {}", e))?;
+        let mut start_time = self
+            .start_time
+            .lock()
+            .map_err(|e| format!("锁错误: {}", e))?;
         *start_time = Some(Instant::now());
         drop(start_time);
 
-        let mut out = self.output_path.lock().map_err(|e| format!("锁错误: {}", e))?;
+        let mut out = self
+            .output_path
+            .lock()
+            .map_err(|e| format!("锁错误: {}", e))?;
         *out = Some(output_path);
         drop(out);
 
@@ -87,8 +93,13 @@ impl ScreenRecorder {
         let frames_data = frames.clone();
         drop(frames);
 
-        let output_path = self.output_path.lock().map_err(|e| format!("锁错误: {}", e))?;
-        let path = output_path.clone().ok_or_else(|| "未设置输出路径".to_string())?;
+        let output_path = self
+            .output_path
+            .lock()
+            .map_err(|e| format!("锁错误: {}", e))?;
+        let path = output_path
+            .clone()
+            .ok_or_else(|| "未设置输出路径".to_string())?;
         drop(output_path);
 
         // 生成 MJPEG AVI 文件
@@ -96,12 +107,10 @@ impl ScreenRecorder {
 
         // 确保输出目录存在
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("创建目录失败: {}", e))?;
+            std::fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
         }
 
-        std::fs::write(&path, &avi_data)
-            .map_err(|e| format!("写入文件失败: {}", e))?;
+        std::fs::write(&path, &avi_data).map_err(|e| format!("写入文件失败: {}", e))?;
 
         tracing::info!("录制完成: {} 帧, 保存至 {:?}", frame_count, path);
 
@@ -268,7 +277,11 @@ impl ScreenRecorder {
                 return Ok((width as u32, height as u32));
             }
             // 跳过其他标记
-            if jpeg[pos] == 0xFF && jpeg[pos + 1] != 0x00 && jpeg[pos + 1] != 0xD8 && jpeg[pos + 1] != 0xD9 {
+            if jpeg[pos] == 0xFF
+                && jpeg[pos + 1] != 0x00
+                && jpeg[pos + 1] != 0xD8
+                && jpeg[pos + 1] != 0xD9
+            {
                 let len = u16::from_be_bytes([jpeg[pos + 2], jpeg[pos + 3]]) as usize;
                 pos += 2 + len;
             } else {

@@ -34,11 +34,14 @@ impl PairingManager {
     pub fn from_ids(ids: &[String]) -> Self {
         let mut devices = HashMap::new();
         for id in ids {
-            devices.insert(id.clone(), DeviceEntry {
-                name: "未知设备".to_string(),
-                nickname: None,
-                paired_at: Utc::now().to_rfc3339(),
-            });
+            devices.insert(
+                id.clone(),
+                DeviceEntry {
+                    name: "未知设备".to_string(),
+                    nickname: None,
+                    paired_at: Utc::now().to_rfc3339(),
+                },
+            );
         }
         Self {
             devices,
@@ -59,23 +62,32 @@ impl PairingManager {
             let _ = all_ids.contains(id);
         }
         for id in ids {
-            let name = names.get(id).cloned().unwrap_or_else(|| "未知设备".to_string());
+            let name = names
+                .get(id)
+                .cloned()
+                .unwrap_or_else(|| "未知设备".to_string());
             let nickname = nicknames.get(id).cloned();
-            devices.insert(id.clone(), DeviceEntry {
-                name,
-                nickname,
-                paired_at: Utc::now().to_rfc3339(),
-            });
+            devices.insert(
+                id.clone(),
+                DeviceEntry {
+                    name,
+                    nickname,
+                    paired_at: Utc::now().to_rfc3339(),
+                },
+            );
         }
         // 额外添加 names 中有但 ids 中没有的设备
         for (id, name) in names {
             if !devices.contains_key(id) {
                 let nickname = nicknames.get(id).cloned();
-                devices.insert(id.clone(), DeviceEntry {
-                    name: name.clone(),
-                    nickname,
-                    paired_at: Utc::now().to_rfc3339(),
-                });
+                devices.insert(
+                    id.clone(),
+                    DeviceEntry {
+                        name: name.clone(),
+                        nickname,
+                        paired_at: Utc::now().to_rfc3339(),
+                    },
+                );
             }
         }
         Self {
@@ -91,7 +103,10 @@ impl PairingManager {
 
     /// 获取所有信任设备信息（id, DeviceEntry）
     pub fn trusted_devices(&self) -> Vec<(String, DeviceEntry)> {
-        self.devices.iter().map(|(id, info)| (id.clone(), info.clone())).collect()
+        self.devices
+            .iter()
+            .map(|(id, info)| (id.clone(), info.clone()))
+            .collect()
     }
 
     pub fn generate_pairing_code() -> String {
@@ -112,11 +127,13 @@ impl PairingManager {
 
     /// 添加信任设备（含名称）
     pub fn trust_device_with_name(&mut self, device_id: &str, name: &str) {
-        self.devices.entry(device_id.to_string()).or_insert_with(|| DeviceEntry {
-            name: name.to_string(),
-            nickname: None,
-            paired_at: Utc::now().to_rfc3339(),
-        });
+        self.devices
+            .entry(device_id.to_string())
+            .or_insert_with(|| DeviceEntry {
+                name: name.to_string(),
+                nickname: None,
+                paired_at: Utc::now().to_rfc3339(),
+            });
     }
 
     /// 移除信任设备
@@ -126,7 +143,9 @@ impl PairingManager {
 
     /// 移除指定名称的所有信任设备（保留指定 ID）
     pub fn untrust_devices_by_name_except(&mut self, name: &str, except_id: &str) {
-        let to_remove: Vec<String> = self.devices.iter()
+        let to_remove: Vec<String> = self
+            .devices
+            .iter()
             .filter(|(id, entry)| entry.name == name && *id != except_id)
             .map(|(id, _)| id.clone())
             .collect();
@@ -143,9 +162,10 @@ impl PairingManager {
     /// 获取设备显示名称（昵称>名称>ID片段）
     #[allow(dead_code)]
     pub fn get_display_name(&self, device_id: &str) -> String {
-        self.devices.get(device_id).map(|entry| {
-            entry.nickname.clone().unwrap_or_else(|| entry.name.clone())
-        }).unwrap_or_else(|| device_id.chars().take(8).collect())
+        self.devices
+            .get(device_id)
+            .map(|entry| entry.nickname.clone().unwrap_or_else(|| entry.name.clone()))
+            .unwrap_or_else(|| device_id.chars().take(8).collect())
     }
 
     /// 设置设备昵称
@@ -201,11 +221,14 @@ impl PairingManager {
     pub fn verify_and_trust_with_name(&mut self, device_id: &str, code: &str, name: &str) -> bool {
         if let Some(ref current) = self.current_code {
             if current == code && !device_id.is_empty() {
-                self.devices.insert(device_id.to_string(), DeviceEntry {
-                    name: name.to_string(),
-                    nickname: None,
-                    paired_at: Utc::now().to_rfc3339(),
-                });
+                self.devices.insert(
+                    device_id.to_string(),
+                    DeviceEntry {
+                        name: name.to_string(),
+                        nickname: None,
+                        paired_at: Utc::now().to_rfc3339(),
+                    },
+                );
                 self.current_code = None;
                 return true;
             }
@@ -237,7 +260,10 @@ impl SharedPairingManager {
     }
 
     pub async fn trust_device_with_name(&self, device_id: &str, name: &str) {
-        self.inner.lock().await.trust_device_with_name(device_id, name);
+        self.inner
+            .lock()
+            .await
+            .trust_device_with_name(device_id, name);
     }
 
     pub async fn untrust_device(&self, device_id: &str) {
@@ -278,10 +304,14 @@ impl SharedPairingManager {
     pub async fn save_to_settings(&self, settings: &mut crate::config::Settings) {
         let inner = self.inner.lock().await;
         settings.trusted_devices = inner.trusted_ids();
-        settings.trusted_device_names = inner.devices.iter()
+        settings.trusted_device_names = inner
+            .devices
+            .iter()
             .map(|(id, e)| (id.clone(), e.name.clone()))
             .collect();
-        settings.trusted_device_nicknames = inner.devices.iter()
+        settings.trusted_device_nicknames = inner
+            .devices
+            .iter()
             .filter_map(|(id, e)| e.nickname.clone().map(|n| (id.clone(), n)))
             .collect();
     }
@@ -309,8 +339,16 @@ impl SharedPairingManager {
         self.inner.lock().await.verify_and_trust(device_id, code)
     }
 
-    pub async fn verify_and_trust_with_name(&self, device_id: &str, code: &str, name: &str) -> bool {
-        self.inner.lock().await.verify_and_trust_with_name(device_id, code, name)
+    pub async fn verify_and_trust_with_name(
+        &self,
+        device_id: &str,
+        code: &str,
+        name: &str,
+    ) -> bool {
+        self.inner
+            .lock()
+            .await
+            .verify_and_trust_with_name(device_id, code, name)
     }
 }
 
@@ -463,7 +501,10 @@ mod tests {
             shared.save_to_settings(&mut settings).await;
             assert_eq!(settings.trusted_devices.len(), 2);
             assert_eq!(settings.trusted_device_names.len(), 2);
-            assert_eq!(settings.trusted_device_names.get("dev-a").unwrap(), "Device A");
+            assert_eq!(
+                settings.trusted_device_names.get("dev-a").unwrap(),
+                "Device A"
+            );
         });
     }
 }

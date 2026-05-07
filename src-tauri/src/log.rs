@@ -139,7 +139,8 @@ mod tests {
     async fn test_ring_buffer_keeps_max_200() {
         let log = OperationLog::new();
         for i in 0..201 {
-            log.add(&format!("op{}", i), &format!("detail{}", i), "ok").await;
+            log.add(&format!("op{}", i), &format!("detail{}", i), "ok")
+                .await;
         }
 
         let entries = log.list().await;
@@ -191,7 +192,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_disk_nonexistent_file_creates_empty_log() {
-        let dir = std::env::temp_dir().join(format!("ffeel-test-log-nonexistent-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ffeel-test-log-nonexistent-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
         let path = dir.join("does_not_exist.json");
 

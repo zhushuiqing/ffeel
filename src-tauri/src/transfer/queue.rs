@@ -121,7 +121,11 @@ mod tests {
             mgr.complete_task(&id);
         }
         let remaining = mgr.list_tasks().len();
-        assert!(remaining <= MAX_HISTORY + 2, "got {remaining} tasks, expected ≤{}", MAX_HISTORY + 2);
+        assert!(
+            remaining <= MAX_HISTORY + 2,
+            "got {remaining} tasks, expected ≤{}",
+            MAX_HISTORY + 2
+        );
     }
 
     #[test]
@@ -408,16 +412,13 @@ impl TransferManager {
     }
 
     /// 更新传输进度
-    pub fn update_progress(
-        &mut self,
-        id: &str,
-        bytes_transferred: u64,
-        speed: f64,
-    ) {
+    pub fn update_progress(&mut self, id: &str, bytes_transferred: u64, speed: f64) {
         // 先读取需要的数据，再修改（避免借用冲突）
-        let snapshot = self.tasks.iter().find(|t| t.id == id).map(|t| {
-            (t.file_name.clone(), t.file_size)
-        });
+        let snapshot = self
+            .tasks
+            .iter()
+            .find(|t| t.id == id)
+            .map(|t| (t.file_name.clone(), t.file_size));
         if let Some((file_name, total_bytes)) = snapshot {
             if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
                 task.bytes_transferred = bytes_transferred;
@@ -438,9 +439,11 @@ impl TransferManager {
 
     /// 标记传输完成
     pub fn complete_task(&mut self, id: &str) {
-        let snapshot = self.tasks.iter().find(|t| t.id == id).map(|t| {
-            (t.file_name.clone(), t.file_size)
-        });
+        let snapshot = self
+            .tasks
+            .iter()
+            .find(|t| t.id == id)
+            .map(|t| (t.file_name.clone(), t.file_size));
         if let Some((file_name, file_size)) = snapshot {
             if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
                 task.status = TransferStatus::Completed;
@@ -457,9 +460,11 @@ impl TransferManager {
 
     /// 标记传输失败
     pub fn fail_task(&mut self, id: &str, error: String) {
-        let snapshot = self.tasks.iter().find(|t| t.id == id).map(|t| {
-            t.file_name.clone()
-        });
+        let snapshot = self
+            .tasks
+            .iter()
+            .find(|t| t.id == id)
+            .map(|t| t.file_name.clone());
         if let Some(file_name) = snapshot {
             if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
                 task.status = TransferStatus::Failed;
@@ -569,9 +574,7 @@ impl TransferManager {
             .filter(|t| {
                 matches!(
                     t.status,
-                    TransferStatus::Completed
-                        | TransferStatus::Failed
-                        | TransferStatus::Cancelled
+                    TransferStatus::Completed | TransferStatus::Failed | TransferStatus::Cancelled
                 )
             })
             .count();
@@ -585,9 +588,7 @@ impl TransferManager {
                 }
                 if matches!(
                     t.status,
-                    TransferStatus::Completed
-                        | TransferStatus::Failed
-                        | TransferStatus::Cancelled
+                    TransferStatus::Completed | TransferStatus::Failed | TransferStatus::Cancelled
                 ) {
                     removed += 1;
                     false

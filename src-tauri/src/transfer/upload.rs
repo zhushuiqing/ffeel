@@ -31,7 +31,10 @@ impl<R: AsyncRead + Unpin> Stream for ProgressStream<R> {
         if let Ok(mgr) = this.transfer_manager.try_lock() {
             let tasks = mgr.list_tasks();
             if let Some(task) = tasks.iter().find(|t| t.id == this.task_id) {
-                if matches!(task.status, TransferStatus::Paused | TransferStatus::Cancelled) {
+                if matches!(
+                    task.status,
+                    TransferStatus::Paused | TransferStatus::Cancelled
+                ) {
                     return Poll::Ready(None);
                 }
             }
@@ -43,7 +46,10 @@ impl<R: AsyncRead + Unpin> Stream for ProgressStream<R> {
                 let now = Instant::now();
                 if now.duration_since(this.last_report) > Duration::from_millis(200) {
                     if let Ok(mut mgr) = this.transfer_manager.try_lock() {
-                        let elapsed = now.duration_since(this.last_report).as_secs_f64().max(0.001);
+                        let elapsed = now
+                            .duration_since(this.last_report)
+                            .as_secs_f64()
+                            .max(0.001);
                         let speed = chunk.len() as f64 / elapsed;
                         mgr.update_progress(&this.task_id, this.bytes_sent, speed);
                     }
@@ -133,9 +139,9 @@ pub async fn upload_file_to_remote(
 
 #[cfg(test)]
 mod tests {
-    use crate::transfer::upload::upload_file_to_remote;
-    use crate::transfer::queue::TransferManager;
     use crate::server::http::serve_tls;
+    use crate::transfer::queue::TransferManager;
+    use crate::transfer::upload::upload_file_to_remote;
     use axum::body::Body;
     use axum::extract::Query;
     use axum::routing::post;
@@ -150,10 +156,10 @@ mod tests {
 
     fn test_cert() -> (String, String) {
         let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap();
-        let mut params =
-            rcgen::CertificateParams::new(vec!["ffeel.local".to_string()]).unwrap();
+        let mut params = rcgen::CertificateParams::new(vec!["ffeel.local".to_string()]).unwrap();
         params.distinguished_name = rcgen::DistinguishedName::new();
-        params.distinguished_name
+        params
+            .distinguished_name
             .push(rcgen::DnType::CommonName, "ffeel-test");
         params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
         let cert = params.self_signed(&key_pair).unwrap();
@@ -193,7 +199,9 @@ mod tests {
         let (_port_tx, mut port_rx) = tokio::sync::watch::channel(0);
         tokio::spawn(async move {
             let _tx = _port_tx;
-            serve_tls(app, listener, &cert_pem, &key_pem, &mut port_rx).await.unwrap();
+            serve_tls(app, listener, &cert_pem, &key_pem, &mut port_rx)
+                .await
+                .unwrap();
         });
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
@@ -254,9 +262,10 @@ mod tests {
         let temp_dir = std::env::temp_dir();
         let non_existent = temp_dir.join("nonexistent_file_xyz_12345.txt");
 
-        let app = Router::new().route("/api/upload", post(|_: Body| async move {
-            Json(json!({"saved_bytes": 0}))
-        }));
+        let app = Router::new().route(
+            "/api/upload",
+            post(|_: Body| async move { Json(json!({"saved_bytes": 0})) }),
+        );
 
         let (cert_pem, key_pem) = test_cert();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -264,7 +273,9 @@ mod tests {
         let (_port_tx2, mut port_rx2) = tokio::sync::watch::channel(0);
         tokio::spawn(async move {
             let _tx2 = _port_tx2;
-            serve_tls(app, listener, &cert_pem, &key_pem, &mut port_rx2).await.unwrap();
+            serve_tls(app, listener, &cert_pem, &key_pem, &mut port_rx2)
+                .await
+                .unwrap();
         });
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 

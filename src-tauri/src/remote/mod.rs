@@ -10,7 +10,8 @@ pub use clipboard::ClipboardSync;
 pub use display::{get_monitors, MonitorInfo};
 pub use input::{handle_input_event, InputEvent};
 pub use permissions::{
-    check_permissions, open_accessibility_settings, open_screen_recording_settings, PermissionStatus,
+    check_permissions, open_accessibility_settings, open_screen_recording_settings,
+    PermissionStatus,
 };
 pub use recording::ScreenRecorder;
 
@@ -54,16 +55,29 @@ pub fn capture_screen_jpeg(quality: u8, scale: f32) -> Result<ScreenFrame, Strin
         // 缩小分辨率以减少带宽（使用快速缩放）
         let new_width = (img.width() as f32 * scale) as u32;
         let new_height = (img.height() as f32 * scale) as u32;
-        let resized = image::imageops::resize(&img, new_width, new_height, image::imageops::FilterType::Triangle);
+        let resized = image::imageops::resize(
+            &img,
+            new_width,
+            new_height,
+            image::imageops::FilterType::Triangle,
+        );
         // 快速 RGBA → RGB 转换
-        let rgb: Vec<u8> = resized.as_raw().chunks(4).flat_map(|c| [c[0], c[1], c[2]]).collect();
+        let rgb: Vec<u8> = resized
+            .as_raw()
+            .chunks(4)
+            .flat_map(|c| [c[0], c[1], c[2]])
+            .collect();
         let rgb_img = image::RgbImage::from_raw(new_width, new_height, rgb)
             .ok_or_else(|| "Failed to create RgbImage".to_string())?;
         (new_width, new_height, rgb_img)
     } else {
         let width = img.width();
         let height = img.height();
-        let rgb: Vec<u8> = img.as_raw().chunks(4).flat_map(|c| [c[0], c[1], c[2]]).collect();
+        let rgb: Vec<u8> = img
+            .as_raw()
+            .chunks(4)
+            .flat_map(|c| [c[0], c[1], c[2]])
+            .collect();
         let rgb_img = image::RgbImage::from_raw(width, height, rgb)
             .ok_or_else(|| "Failed to create RgbImage".to_string())?;
         (width, height, rgb_img)
@@ -73,7 +87,12 @@ pub fn capture_screen_jpeg(quality: u8, scale: f32) -> Result<ScreenFrame, Strin
     {
         let mut encoder = JpegEncoder::new_with_quality(&mut jpeg_data, quality);
         encoder
-            .encode(rgb_img.as_raw(), width, height, image::ExtendedColorType::Rgb8)
+            .encode(
+                rgb_img.as_raw(),
+                width,
+                height,
+                image::ExtendedColorType::Rgb8,
+            )
             .map_err(|e| format!("JPEG encode error: {}", e))?;
     }
 
@@ -223,10 +242,7 @@ pub async fn relay_mjpeg_stream(
         // Extract frames from buffer
         #[allow(clippy::while_let_loop)]
         loop {
-            let boundary_pos = match buf
-                .windows(boundary.len())
-                .position(|w| w == boundary)
-            {
+            let boundary_pos = match buf.windows(boundary.len()).position(|w| w == boundary) {
                 Some(p) => p,
                 None => break,
             };
@@ -238,8 +254,8 @@ pub async fn relay_mjpeg_stream(
             };
 
             // Try to find Content-Length for reliable frame extraction
-            let header_section = std::str::from_utf8(&buf[boundary_pos + boundary.len()..header_end])
-                .ok();
+            let header_section =
+                std::str::from_utf8(&buf[boundary_pos + boundary.len()..header_end]).ok();
             let content_len = header_section.and_then(|h| {
                 h.lines()
                     .find(|l| l.to_lowercase().starts_with("content-length:"))
@@ -255,7 +271,9 @@ pub async fn relay_mjpeg_stream(
             } else {
                 // No Content-Length: scan for next --frame
                 let remaining = &buf[header_end..];
-                if let Some(next_b) = remaining.windows(boundary.len()).position(|w| w == boundary)
+                if let Some(next_b) = remaining
+                    .windows(boundary.len())
+                    .position(|w| w == boundary)
                 {
                     let mut end = header_end + next_b;
                     // Strip trailing \r\n

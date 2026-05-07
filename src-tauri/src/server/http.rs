@@ -7,16 +7,16 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
-use std::convert::TryFrom;
+use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::server::conn::auto::Builder;
+use hyper_util::service::TowerToHyperService;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex};
-use hyper_util::rt::{TokioExecutor, TokioIo};
-use hyper_util::server::conn::auto::Builder;
-use hyper_util::service::TowerToHyperService;
 use tokio_rustls::TlsAcceptor;
 use tower::ServiceExt;
 use tower_http::cors::CorsLayer;
@@ -138,17 +138,26 @@ pub fn build_router(
         .route("/api/pair/code", get(get_pairing_code_handler))
         .route("/api/pair/rotate", post(rotate_pairing_code_handler))
         .route("/api/pair/trusted", get(list_trusted_devices_handler))
-        .route("/api/pair/trusted/:id", delete(remove_trusted_device_handler))
+        .route(
+            "/api/pair/trusted/:id",
+            delete(remove_trusted_device_handler),
+        )
         .route("/api/pair/nickname/:id", post(set_device_nickname_handler))
         .route("/api/transfers", get(list_transfers_handler))
         .route("/api/transfers/pause/:id", post(pause_transfer_handler))
         .route("/api/transfers/resume/:id", post(resume_transfer_handler))
         .route("/api/transfers/cancel/:id", post(cancel_transfer_handler))
-        .route("/api/settings", get(get_settings_handler).put(update_settings_handler))
+        .route(
+            "/api/settings",
+            get(get_settings_handler).put(update_settings_handler),
+        )
         .route("/api/chat/messages", get(get_chat_messages_handler))
         .route("/api/chat/send", post(send_chat_message_handler))
         .route("/api/chat/upload", post(upload_chat_file_handler))
-        .route("/api/chat/download/:file_id", get(download_chat_file_handler))
+        .route(
+            "/api/chat/download/:file_id",
+            get(download_chat_file_handler),
+        )
         .route("/api/chat/online", get(get_online_devices_handler))
         .route("/api/chat/heartbeat", post(heartbeat_handler))
         .route("/remote/screen/stream", get(remote_screen_stream_handler))
@@ -176,7 +185,15 @@ async fn pairing_middleware(
 ) -> Result<impl IntoResponse, AppErrorResponse> {
     if state.require_pairing {
         let path = req.uri().path();
-        if path == "/" || path == "/api/health" || path == "/api/pair" || path == "/api/pair/check" || path == "/api/chat/online" || path == "/api/chat/heartbeat" || path == "/api/devices" || path.starts_with("/remote/screen") {
+        if path == "/"
+            || path == "/api/health"
+            || path == "/api/pair"
+            || path == "/api/pair/check"
+            || path == "/api/chat/online"
+            || path == "/api/chat/heartbeat"
+            || path == "/api/devices"
+            || path.starts_with("/remote/screen")
+        {
             return Ok(next.run(req).await);
         }
         let device_id = req
@@ -219,7 +236,11 @@ async fn pair_device_handler(
         )));
     }
 
-    if state.pairing.verify_and_trust_with_name(device_id, code, device_name).await {
+    if state
+        .pairing
+        .verify_and_trust_with_name(device_id, code, device_name)
+        .await
+    {
         // 持久化信任设备到磁盘
         let mut settings = crate::config::Settings::load();
         state.pairing.save_to_settings(&mut settings).await;
@@ -250,13 +271,15 @@ async fn list_directory(
     }
 
     let mut entries = Vec::new();
-    let mut read_dir = tokio::fs::read_dir(&full_path).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    let mut read_dir = tokio::fs::read_dir(&full_path)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
-    while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })? {
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?
+    {
         let metadata = entry.metadata().await.ok();
         let is_dir = entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false);
 
@@ -358,14 +381,14 @@ async fn download_file(
     };
 
     use tokio::io::AsyncSeekExt;
-    let mut file = tokio::fs::File::open(&full_path).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    let mut file = tokio::fs::File::open(&full_path)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     if start > 0 {
-        file.seek(tokio::io::SeekFrom::Start(start)).await.map_err(|e| {
-            AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-        })?;
+        file.seek(tokio::io::SeekFrom::Start(start))
+            .await
+            .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
     }
 
     let stream = tokio_util::io::ReaderStream::new(file);
@@ -375,7 +398,10 @@ async fn download_file(
     let is_range = start > 0;
 
     let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::try_from(mime.to_string().as_str()).unwrap());
+    headers.insert(
+        "Content-Type",
+        HeaderValue::try_from(mime.to_string().as_str()).unwrap(),
+    );
     headers.insert(
         "Content-Disposition",
         HeaderValue::try_from(format!("attachment; filename=\"{}\"", filename).as_str()).unwrap(),
@@ -385,7 +411,8 @@ async fn download_file(
     let status = if is_range {
         headers.insert(
             "Content-Range",
-            HeaderValue::try_from(format!("bytes {}-{}/{}", start, end, file_len).as_str()).unwrap(),
+            HeaderValue::try_from(format!("bytes {}-{}/{}", start, end, file_len).as_str())
+                .unwrap(),
         );
         headers.insert(
             "Content-Length",
@@ -413,9 +440,9 @@ async fn upload_file(
     let target_dir = resolve_safe_path(&base, &rel_path)?;
 
     if !target_dir.exists() {
-        tokio::fs::create_dir_all(&target_dir).await.map_err(|e| {
-            AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-        })?;
+        tokio::fs::create_dir_all(&target_dir)
+            .await
+            .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
     }
 
     let filename = query.name.unwrap_or_else(|| "upload".to_string());
@@ -423,20 +450,19 @@ async fn upload_file(
     let filename = filename.replace("..", "").replace(['/', '\\'], "_");
     let save_path = target_dir.join(&filename);
 
-    let mut file = tokio::fs::File::create(&save_path).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    let mut file = tokio::fs::File::create(&save_path)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     let mut stream = body.into_data_stream();
     let mut saved = 0u64;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| {
-            AppErrorResponse((StatusCode::BAD_REQUEST, e.to_string()))
-        })?;
-        file.write_all(&chunk).await.map_err(|e| {
-            AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-        })?;
+        let chunk =
+            chunk.map_err(|e| AppErrorResponse((StatusCode::BAD_REQUEST, e.to_string())))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
         saved += chunk.len() as u64;
     }
 
@@ -489,10 +515,20 @@ async fn search_recursive(
                 let metadata = entry.metadata().await.ok();
                 results.push(DirEntry {
                     name,
-                    entry_type: if is_dir { "directory".to_string() } else { "file".to_string() },
+                    entry_type: if is_dir {
+                        "directory".to_string()
+                    } else {
+                        "file".to_string()
+                    },
                     size: metadata.as_ref().map(|m| m.len()),
-                    modified_at: metadata.as_ref().and_then(|m| m.modified().ok())
-                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_secs().to_string())),
+                    modified_at: metadata
+                        .as_ref()
+                        .and_then(|m| m.modified().ok())
+                        .and_then(|t| {
+                            t.duration_since(std::time::UNIX_EPOCH)
+                                .ok()
+                                .map(|d| d.as_secs().to_string())
+                        }),
                     is_dir,
                 });
             }
@@ -508,7 +544,10 @@ async fn check_pairing_handler(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
-    let device_id = headers.get("x-device-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let device_id = headers
+        .get("x-device-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
     let trusted = state.pairing.is_trusted(device_id).await;
     Ok(Json(serde_json::json!({
         "trusted": trusted,
@@ -534,10 +573,16 @@ async fn share_download_handler(
             let full_path = resolve_safe_path(&base, &path)?;
 
             if !full_path.exists() {
-                return Err(AppErrorResponse((StatusCode::NOT_FOUND, "文件不存在".to_string())));
+                return Err(AppErrorResponse((
+                    StatusCode::NOT_FOUND,
+                    "文件不存在".to_string(),
+                )));
             }
             if full_path.is_dir() {
-                return Err(AppErrorResponse((StatusCode::BAD_REQUEST, "不能分享目录".to_string())));
+                return Err(AppErrorResponse((
+                    StatusCode::BAD_REQUEST,
+                    "不能分享目录".to_string(),
+                )));
             }
 
             let filename = full_path
@@ -562,12 +607,16 @@ async fn share_download_handler(
             );
             headers.insert(
                 "Content-Disposition",
-                HeaderValue::try_from(format!("attachment; filename=\"{}\"", filename).as_str()).unwrap(),
+                HeaderValue::try_from(format!("attachment; filename=\"{}\"", filename).as_str())
+                    .unwrap(),
             );
 
             Ok((StatusCode::OK, headers, body))
         }
-        _ => Err(AppErrorResponse((StatusCode::FORBIDDEN, "分享链接已失效".to_string()))),
+        _ => Err(AppErrorResponse((
+            StatusCode::FORBIDDEN,
+            "分享链接已失效".to_string(),
+        ))),
     }
 }
 
@@ -587,9 +636,8 @@ async fn pause_transfer_handler(
     AxumPath(param): AxumPath<TransferIdParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let mut tm = state.transfer_manager.lock().await;
-    tm.pause_task(&param.id).map_err(|e| {
-        AppErrorResponse((StatusCode::BAD_REQUEST, e.message))
-    })?;
+    tm.pause_task(&param.id)
+        .map_err(|e| AppErrorResponse((StatusCode::BAD_REQUEST, e.message)))?;
     Ok(Json(serde_json::json!({"status": "paused"})))
 }
 
@@ -599,9 +647,8 @@ async fn resume_transfer_handler(
     AxumPath(param): AxumPath<TransferIdParam>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
     let mut tm = state.transfer_manager.lock().await;
-    tm.resume_task(&param.id).map_err(|e| {
-        AppErrorResponse((StatusCode::BAD_REQUEST, e.message))
-    })?;
+    tm.resume_task(&param.id)
+        .map_err(|e| AppErrorResponse((StatusCode::BAD_REQUEST, e.message)))?;
     Ok(Json(serde_json::json!({"status": "resumed"})))
 }
 
@@ -649,7 +696,8 @@ async fn list_trusted_devices_handler(
         .get("x-device-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    let result: Vec<serde_json::Value> = devices.into_iter()
+    let result: Vec<serde_json::Value> = devices
+        .into_iter()
         .filter(|(id, _)| id != requestor_id)
         .map(|(id, entry)| {
             serde_json::json!({
@@ -658,7 +706,8 @@ async fn list_trusted_devices_handler(
                 "nickname": entry.nickname,
                 "paired_at": entry.paired_at,
             })
-        }).collect();
+        })
+        .collect();
     Ok(Json(result))
 }
 
@@ -686,7 +735,9 @@ async fn set_device_nickname_handler(
     let mut settings = crate::config::Settings::load();
     state.pairing.save_to_settings(&mut settings).await;
     let _ = settings.save();
-    Ok(Json(serde_json::json!({"status": "updated", "nickname": nickname})))
+    Ok(Json(
+        serde_json::json!({"status": "updated", "nickname": nickname}),
+    ))
 }
 
 // ============== Settings Endpoints ==============
@@ -726,9 +777,9 @@ async fn update_settings_handler(
     if let Some(v) = body.max_retries {
         settings.max_retries = v;
     }
-    settings.save().map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    settings
+        .save()
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
     Ok(Json(serde_json::json!({"status": "saved"})))
 }
 
@@ -748,23 +799,45 @@ async fn send_chat_message_handler(
     headers: HeaderMap,
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, AppErrorResponse> {
-    let device_id = headers.get("x-device-id").and_then(|v| v.to_str().ok()).unwrap_or("unknown");
-    let device_name = headers.get("x-device-name").and_then(|v| v.to_str().ok()).unwrap_or("未知");
-    let text = body.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let to_id = body.get("to_id").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let device_id = headers
+        .get("x-device-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("unknown");
+    let device_name = headers
+        .get("x-device-name")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("未知");
+    let text = body
+        .get("text")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let to_id = body
+        .get("to_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
 
     if text.is_empty() {
-        return Err(AppErrorResponse((StatusCode::BAD_REQUEST, "消息不能为空".to_string())));
+        return Err(AppErrorResponse((
+            StatusCode::BAD_REQUEST,
+            "消息不能为空".to_string(),
+        )));
     }
 
-    let entry = state.chat_store.add_message(
-        device_id.to_string(),
-        device_name.to_string(),
-        text,
-        "text".to_string(),
-        None, None, None, None,
-        to_id.clone(),
-    ).await;
+    let entry = state
+        .chat_store
+        .add_message(
+            device_id.to_string(),
+            device_name.to_string(),
+            text,
+            "text".to_string(),
+            None,
+            None,
+            None,
+            None,
+            to_id.clone(),
+        )
+        .await;
 
     let _ = state.ws_tx.send(WsMessage::ChatMessage {
         from_id: entry.from_id.clone(),
@@ -808,25 +881,28 @@ async fn upload_chat_file_handler(
     let mut stream = body.into_data_stream();
     let mut body_bytes = Vec::new();
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| {
-            AppErrorResponse((StatusCode::BAD_REQUEST, e.to_string()))
-        })?;
+        let chunk =
+            chunk.map_err(|e| AppErrorResponse((StatusCode::BAD_REQUEST, e.to_string())))?;
         body_bytes.extend_from_slice(&chunk);
     }
 
     let device_id = query.device_id.unwrap_or_else(|| {
-        headers.get("x-device-id")
+        headers
+            .get("x-device-id")
             .and_then(|v| v.to_str().ok().map(|s| s.to_string()))
             .unwrap_or_else(|| "web".to_string())
     });
     let device_name = query.device_name.unwrap_or_else(|| {
-        headers.get("x-device-name")
+        headers
+            .get("x-device-name")
             .and_then(|v| v.to_str().ok().map(|s| s.to_string()))
             .unwrap_or_else(|| "web".to_string())
     });
 
     let file_name = query.name.unwrap_or_else(|| "file".to_string());
-    let file_type = query.file_type.unwrap_or_else(|| "application/octet-stream".to_string());
+    let file_type = query
+        .file_type
+        .unwrap_or_else(|| "application/octet-stream".to_string());
     let to_id = query.to_id;
 
     let safe_name = file_name.replace("..", "").replace(['/', '\\'], "_");
@@ -837,31 +913,38 @@ async fn upload_chat_file_handler(
 
     let base = state.share_dir.read().unwrap().clone();
     let chat_dir = base.join(".chat_files").join(&file_id);
-    tokio::fs::create_dir_all(&chat_dir).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    tokio::fs::create_dir_all(&chat_dir)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     let save_path = chat_dir.join(&safe_name);
     let file_size = body_bytes.len() as u64;
-    tokio::fs::write(&save_path, &body_bytes).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    tokio::fs::write(&save_path, &body_bytes)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     // 判断是否为图片
     let is_image = file_type.starts_with("image/");
-    let msg_type = if is_image { "image".to_string() } else { "file".to_string() };
+    let msg_type = if is_image {
+        "image".to_string()
+    } else {
+        "file".to_string()
+    };
 
-    let entry = state.chat_store.add_message(
-        device_id.clone(),
-        device_name,
-        format!("[{}]", safe_name),
-        msg_type,
-        Some(safe_name.clone()),
-        Some(file_size),
-        Some(file_id.clone()),
-        Some(file_type),
-        to_id.clone(),
-    ).await;
+    let entry = state
+        .chat_store
+        .add_message(
+            device_id.clone(),
+            device_name,
+            format!("[{}]", safe_name),
+            msg_type,
+            Some(safe_name.clone()),
+            Some(file_size),
+            Some(file_id.clone()),
+            Some(file_type),
+            to_id.clone(),
+        )
+        .await;
 
     let _ = state.ws_tx.send(WsMessage::ChatMessage {
         from_id: entry.from_id,
@@ -893,30 +976,45 @@ async fn download_chat_file_handler(
     let file_dir = base.join(".chat_files").join(&file_id);
 
     if !file_dir.exists() {
-        return Err(AppErrorResponse((StatusCode::NOT_FOUND, "文件不存在".to_string())));
+        return Err(AppErrorResponse((
+            StatusCode::NOT_FOUND,
+            "文件不存在".to_string(),
+        )));
     }
 
-    let mut entries = tokio::fs::read_dir(&file_dir).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    let mut entries = tokio::fs::read_dir(&file_dir)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     let file_path = match entries.next_entry().await {
         Ok(Some(entry)) => entry.path(),
-        _ => return Err(AppErrorResponse((StatusCode::NOT_FOUND, "文件不存在".to_string()))),
+        _ => {
+            return Err(AppErrorResponse((
+                StatusCode::NOT_FOUND,
+                "文件不存在".to_string(),
+            )))
+        }
     };
 
-    let file_name = file_path.file_name()
+    let file_name = file_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("file")
         .to_string();
 
-    let data = tokio::fs::read(&file_path).await.map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-    })?;
+    let data = tokio::fs::read(&file_path)
+        .await
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
 
     let headers = [
-        (axum::http::header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", file_name)),
-        (axum::http::header::CONTENT_TYPE, "application/octet-stream".to_string()),
+        (
+            axum::http::header::CONTENT_DISPOSITION,
+            format!("attachment; filename=\"{}\"", file_name),
+        ),
+        (
+            axum::http::header::CONTENT_TYPE,
+            "application/octet-stream".to_string(),
+        ),
     ];
 
     Ok((headers, data))
@@ -971,9 +1069,7 @@ async fn remote_screen_stream_handler(
     );
 
     // 将 Channel 流转换为 HTTP Body
-    let body = Body::from_stream(rx_stream.map(|data| {
-        Ok::<_, axum::Error>(Bytes::from(data))
-    }));
+    let body = Body::from_stream(rx_stream.map(|data| Ok::<_, axum::Error>(Bytes::from(data))));
 
     Ok(Response::builder()
         .header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
@@ -989,7 +1085,10 @@ async fn remote_screen_proxy_handler(
 ) -> Result<Response<Body>, AppErrorResponse> {
     use futures_util::StreamExt;
     let ip = query.get("ip").cloned().unwrap_or_default();
-    let port: u16 = query.get("port").and_then(|p| p.parse().ok()).unwrap_or(51111);
+    let port: u16 = query
+        .get("port")
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(51111);
 
     if ip.is_empty() {
         return Err(AppErrorResponse((
@@ -1007,7 +1106,10 @@ async fn remote_screen_proxy_handler(
         .danger_accept_invalid_certs(true)
         .build()
         .map_err(|e| {
-            AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP 客户端创建失败: {}", e)))
+            AppErrorResponse((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("HTTP 客户端创建失败: {}", e),
+            ))
         })?;
 
     let response = client.get(&target_url).send().await.map_err(|e| {
@@ -1016,15 +1118,17 @@ async fn remote_screen_proxy_handler(
 
     if !response.status().is_success() {
         let status = response.status();
-        return Err(AppErrorResponse((StatusCode::BAD_GATEWAY, format!("远程设备返回错误: {}", status))));
+        return Err(AppErrorResponse((
+            StatusCode::BAD_GATEWAY,
+            format!("远程设备返回错误: {}", status),
+        )));
     }
 
     let upstream_body = response.bytes_stream();
     let body = Body::from_stream(upstream_body.map(|result| {
-        result
-            .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::other(e.to_string()))
-            })
+        result.map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::other(e.to_string()))
+        })
     }));
 
     Ok(Response::builder()
@@ -1036,9 +1140,8 @@ async fn remote_screen_proxy_handler(
 
 /// 获取显示器列表
 async fn get_monitors_handler() -> Result<Json<Vec<crate::remote::MonitorInfo>>, AppErrorResponse> {
-    let monitors = crate::remote::get_monitors().map_err(|e| {
-        AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e))
-    })?;
+    let monitors = crate::remote::get_monitors()
+        .map_err(|e| AppErrorResponse((StatusCode::INTERNAL_SERVER_ERROR, e)))?;
     Ok(Json(monitors))
 }
 
@@ -1078,9 +1181,9 @@ fn resolve_safe_path(base: &Path, rel_path: &str) -> Result<PathBuf, AppErrorRes
         base.join(clean)
     };
 
-    let canonical_base =
-        base.canonicalize()
-            .map_err(|_| AppErrorResponse((StatusCode::FORBIDDEN, "无法解析目录路径".to_string())))?;
+    let canonical_base = base
+        .canonicalize()
+        .map_err(|_| AppErrorResponse((StatusCode::FORBIDDEN, "无法解析目录路径".to_string())))?;
 
     let canonical_target = target
         .canonicalize()
@@ -1119,10 +1222,8 @@ pub async fn serve_tls(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    let certs = rustls_pemfile::certs(&mut cert_pem.as_bytes())
-        .collect::<Result<Vec<_>, _>>()?;
-    let key = rustls_pemfile::private_key(&mut key_pem.as_bytes())?
-        .ok_or("未找到私钥")?;
+    let certs = rustls_pemfile::certs(&mut cert_pem.as_bytes()).collect::<Result<Vec<_>, _>>()?;
+    let key = rustls_pemfile::private_key(&mut key_pem.as_bytes())?.ok_or("未找到私钥")?;
 
     let server_config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -1181,10 +1282,10 @@ mod tests {
     /// 生成测试用自签名证书
     fn test_cert() -> (String, String) {
         let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap();
-        let mut params =
-            rcgen::CertificateParams::new(vec!["ffeel.local".to_string()]).unwrap();
+        let mut params = rcgen::CertificateParams::new(vec!["ffeel.local".to_string()]).unwrap();
         params.distinguished_name = rcgen::DistinguishedName::new();
-        params.distinguished_name
+        params
+            .distinguished_name
             .push(rcgen::DnType::CommonName, "ffeel-test");
         params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
         let cert = params.self_signed(&key_pair).unwrap();
@@ -1259,7 +1360,18 @@ mod tests {
         let tm = Arc::new(Mutex::new(TransferManager::new(3)));
         let pairing = SharedPairingManager::new(PairingManager::new());
 
-        let app = build_router(Arc::new(RwLock::new(dir.path().to_path_buf())), tm, ws_tx, pairing, false, ChatStore::new(), WsConnectionTracker::new(), "test-device".to_string(), Arc::new(RwLock::new(Vec::new())), ClipboardSync::new().unwrap());
+        let app = build_router(
+            Arc::new(RwLock::new(dir.path().to_path_buf())),
+            tm,
+            ws_tx,
+            pairing,
+            false,
+            ChatStore::new(),
+            WsConnectionTracker::new(),
+            "test-device".to_string(),
+            Arc::new(RwLock::new(Vec::new())),
+            ClipboardSync::new().unwrap(),
+        );
 
         let (cert_pem, key_pem) = test_cert();
 
@@ -1369,10 +1481,7 @@ mod tests {
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
         let entries: Vec<DirEntry> = resp.json().await.unwrap();
-        assert!(
-            entries.is_empty(),
-            "empty query should return no results"
-        );
+        assert!(entries.is_empty(), "empty query should return no results");
     }
 
     #[tokio::test]
@@ -1392,7 +1501,10 @@ mod tests {
         let (_dir, addr) = setup_test_server_tls().await;
         let client = tls_client();
         let resp = client
-            .get(format!("https://{}/api/download?path=nonexistent.txt", addr))
+            .get(format!(
+                "https://{}/api/download?path=nonexistent.txt",
+                addr
+            ))
             .send()
             .await
             .unwrap();

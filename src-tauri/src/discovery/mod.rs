@@ -1,8 +1,8 @@
 use crate::error::AppError;
 use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 
 const SERVICE_TYPE: &str = "_ffeel._tcp.local.";
@@ -104,9 +104,7 @@ impl DiscoveryManager {
     }
 
     /// 开始扫描局域网中的 ffeel 设备
-    pub fn start_browsing(
-        &self,
-    ) -> Result<broadcast::Receiver<DeviceEvent>, AppError> {
+    pub fn start_browsing(&self) -> Result<broadcast::Receiver<DeviceEvent>, AppError> {
         self.running.store(true, Ordering::SeqCst);
 
         let receiver = self.daemon.browse(SERVICE_TYPE).map_err(|e| AppError {
@@ -156,8 +154,7 @@ impl DiscoveryManager {
                     }
                     Ok(ServiceEvent::ServiceRemoved(_, full_name)) => {
                         let name = full_name.split('.').next().unwrap_or(&full_name);
-                        let _ = device_tx
-                            .send(DeviceEvent::Lost(name.to_string()));
+                        let _ = device_tx.send(DeviceEvent::Lost(name.to_string()));
                     }
                     Err(e) => {
                         tracing::warn!("mDNS 接收错误: {}", e);

@@ -12,14 +12,14 @@ use config::Settings;
 use discovery::{DeviceInfo, DiscoveryManager};
 use error::AppError;
 use log::OperationLog;
-use security::pairing::{PairingManager, SharedPairingManager};
+use remote::{ClipboardSync, ScreenRecorder};
 use security::certificate::CertificateManager;
+use security::pairing::{PairingManager, SharedPairingManager};
 use server::http::DirEntry;
 use server::ws::{ChatStore, WsConnectionTracker, WsMessage};
-use transfer::queue::{TransferDirection, TransferManager, TransferTask, TransferStatus};
 use transfer::download;
+use transfer::queue::{TransferDirection, TransferManager, TransferStatus, TransferTask};
 use transfer::upload;
-use remote::{ClipboardSync, ScreenRecorder};
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -87,7 +87,12 @@ async fn run_download_loop(
     file_name: String,
     speed_limit: u64,
 ) {
-    log.add("download", &format!("开始下载: {} 从 {}", file_name, remote_addr), "pending").await;
+    log.add(
+        "download",
+        &format!("开始下载: {} 从 {}", file_name, remote_addr),
+        "pending",
+    )
+    .await;
     loop {
         match download::download_file_from_remote(
             &remote_addr,
@@ -99,7 +104,8 @@ async fn run_download_loop(
         .await
         {
             Ok(()) => {
-                log.add("download", &format!("完成下载: {}", file_name), "success").await;
+                log.add("download", &format!("完成下载: {}", file_name), "success")
+                    .await;
                 let _ = app.emit(
                     "transfer-complete",
                     serde_json::json!({ "id": task_id, "file_name": file_name }),
@@ -107,7 +113,8 @@ async fn run_download_loop(
                 break;
             }
             Err(e) if e.message == "TRANSFER_PAUSED" => {
-                log.add("download", &format!("暂停下载: {}", file_name), "pending").await;
+                log.add("download", &format!("暂停下载: {}", file_name), "pending")
+                    .await;
                 break;
             }
             Err(e) if e.message == "TRANSFER_CANCELLED" => {
@@ -122,7 +129,12 @@ async fn run_download_loop(
             Err(e) => {
                 let mut mgr = tm.lock().await;
                 if !mgr.record_failure(&task_id, e.message.clone()) {
-                    log.add("download", &format!("下载失败: {} - {}", file_name, e.message), "error").await;
+                    log.add(
+                        "download",
+                        &format!("下载失败: {} - {}", file_name, e.message),
+                        "error",
+                    )
+                    .await;
                     let _ = app.emit(
                         "transfer-error",
                         serde_json::json!({ "id": task_id, "error": e.message }),
@@ -217,11 +229,14 @@ async fn browse_directory(
             message: format!("HTTP 客户端创建失败: {}", e),
         })?;
 
-    let response = client.get(&url).header("x-device-id", device_id).send().await.map_err(|e| {
-        AppError {
+    let response = client
+        .get(&url)
+        .header("x-device-id", device_id)
+        .send()
+        .await
+        .map_err(|e| AppError {
             message: format!("连接远程设备失败: {}:{} - {}", device_ip, port, e),
-        }
-    })?;
+        })?;
 
     if response.status() == reqwest::StatusCode::FORBIDDEN {
         return Err(AppError {
@@ -229,10 +244,8 @@ async fn browse_directory(
         });
     }
 
-    let entries: Vec<DirEntry> = response.json().await.map_err(|e| {
-        AppError {
-            message: format!("解析目录列表失败: {}", e),
-        }
+    let entries: Vec<DirEntry> = response.json().await.map_err(|e| AppError {
+        message: format!("解析目录列表失败: {}", e),
     })?;
 
     Ok(entries)
@@ -282,8 +295,15 @@ async fn download_file(
     let log = state.operation_log.clone();
 
     tokio::spawn(run_download_loop(
-        app, tm, log, task_id, remote_addr, remote_path,
-        local_path_buf, file_name, speed_limit,
+        app,
+        tm,
+        log,
+        task_id,
+        remote_addr,
+        remote_path,
+        local_path_buf,
+        file_name,
+        speed_limit,
     ));
 
     Ok(())
@@ -315,9 +335,14 @@ async fn search_files(
             message: format!("HTTP 客户端创建失败: {}", e),
         })?;
 
-    let response = client.get(&url).header("x-device-id", device_id).send().await.map_err(|e| AppError {
-        message: format!("搜索请求失败: {}:{} - {}", device_ip, port, e),
-    })?;
+    let response = client
+        .get(&url)
+        .header("x-device-id", device_id)
+        .send()
+        .await
+        .map_err(|e| AppError {
+            message: format!("搜索请求失败: {}:{} - {}", device_ip, port, e),
+        })?;
 
     let entries: Vec<DirEntry> = response.json().await.map_err(|e| AppError {
         message: format!("解析搜索结果失败: {}", e),
@@ -346,12 +371,14 @@ async fn list_all_files(
             .timeout(std::time::Duration::from_secs(10))
             .danger_accept_invalid_certs(true)
             .build()
-            .map_err(|e| AppError { message: format!("HTTP 客户端创建失败: {}", e) })?;
-        let response = client.get(&url).send().await.map_err(|e| {
-            AppError { message: format!("获取目录失败: {}", e) }
+            .map_err(|e| AppError {
+                message: format!("HTTP 客户端创建失败: {}", e),
+            })?;
+        let response = client.get(&url).send().await.map_err(|e| AppError {
+            message: format!("获取目录失败: {}", e),
         })?;
-        let entries: Vec<DirEntry> = response.json().await.map_err(|e| {
-            AppError { message: format!("解析目录列表失败: {}", e) }
+        let entries: Vec<DirEntry> = response.json().await.map_err(|e| AppError {
+            message: format!("解析目录列表失败: {}", e),
         })?;
 
         for entry in entries {
@@ -389,7 +416,9 @@ async fn download_directory(
     // 递归列出所有文件
     let files = list_all_files(&device_ip, port, &remote_path).await?;
     if files.is_empty() {
-        return Err(AppError { message: "目录为空".to_string() });
+        return Err(AppError {
+            message: "目录为空".to_string(),
+        });
     }
 
     let total_size: u64 = files.iter().map(|(_, s)| s).sum();
@@ -426,7 +455,12 @@ async fn download_directory(
     let log = state.operation_log.clone();
 
     tokio::spawn(async move {
-        log.add("download_folder", &format!("开始下载文件夹: {} ({} 个文件)", folder_name, files.len()), "pending").await;
+        log.add(
+            "download_folder",
+            &format!("开始下载文件夹: {} ({} 个文件)", folder_name, files.len()),
+            "pending",
+        )
+        .await;
         let mut overall_progress: u64 = 0;
 
         for (rel_path, file_size) in &files {
@@ -468,7 +502,12 @@ async fn download_directory(
                     mgr.update_progress(&task_id, overall_progress, 0.0);
                 }
                 Err(e) => {
-                    log.add("download_folder", &format!("文件夹下载失败: {} - {}", folder_name, e.message), "error").await;
+                    log.add(
+                        "download_folder",
+                        &format!("文件夹下载失败: {} - {}", folder_name, e.message),
+                        "error",
+                    )
+                    .await;
                     let mut mgr = tm.lock().await;
                     mgr.fail_task(&task_id, format!("{}: {}", rel_path, e.message));
                     return;
@@ -476,7 +515,12 @@ async fn download_directory(
             }
         }
 
-        log.add("download_folder", &format!("完成下载文件夹: {}", folder_name), "success").await;
+        log.add(
+            "download_folder",
+            &format!("完成下载文件夹: {}", folder_name),
+            "success",
+        )
+        .await;
         let mut mgr = tm.lock().await;
         mgr.complete_task(&task_id);
         let _ = app_handle.emit(
@@ -540,7 +584,12 @@ async fn upload_file(
     let log_file_name = file_name.clone();
 
     tokio::spawn(async move {
-        log.add("upload", &format!("开始上传: {} 到 {}", log_file_name, remote_addr), "pending").await;
+        log.add(
+            "upload",
+            &format!("开始上传: {} 到 {}", log_file_name, remote_addr),
+            "pending",
+        )
+        .await;
         loop {
             // 检查上传任务状态（暂停/取消检测）
             {
@@ -549,7 +598,8 @@ async fn upload_file(
                 if let Some(task) = tasks.iter().find(|t| t.id == task_id) {
                     match task.status {
                         TransferStatus::Paused => {
-                            log.add("upload", &format!("暂停上传: {}", log_file_name), "pending").await;
+                            log.add("upload", &format!("暂停上传: {}", log_file_name), "pending")
+                                .await;
                             return;
                         }
                         TransferStatus::Cancelled => {
@@ -574,7 +624,8 @@ async fn upload_file(
                 Ok(()) => {
                     let mut mgr = tm.lock().await;
                     mgr.complete_task(&task_id);
-                    log.add("upload", &format!("完成上传: {}", log_file_name), "success").await;
+                    log.add("upload", &format!("完成上传: {}", log_file_name), "success")
+                        .await;
                     let _ = app.emit(
                         "transfer-complete",
                         serde_json::json!({
@@ -587,7 +638,12 @@ async fn upload_file(
                 Err(e) => {
                     let mut mgr = tm.lock().await;
                     if !mgr.record_failure(&task_id, e.message.clone()) {
-                        log.add("upload", &format!("上传失败: {} - {}", log_file_name, e.message), "error").await;
+                        log.add(
+                            "upload",
+                            &format!("上传失败: {} - {}", log_file_name, e.message),
+                            "error",
+                        )
+                        .await;
                         let _ = app.emit(
                             "transfer-error",
                             serde_json::json!({
@@ -645,20 +701,34 @@ async fn resume_download(app: tauri::AppHandle, id: String) -> Result<(), AppErr
     let (remote_addr, remote_path, local_path, file_name) = {
         let mut mgr = state.transfer_manager.lock().await;
         let tasks = mgr.list_tasks();
-        let task = tasks.iter().find(|t| t.id == id).cloned()
-            .ok_or_else(|| AppError { message: "任务不存在".to_string() })?;
+        let task = tasks
+            .iter()
+            .find(|t| t.id == id)
+            .cloned()
+            .ok_or_else(|| AppError {
+                message: "任务不存在".to_string(),
+            })?;
 
         if task.status != TransferStatus::Paused {
-            return Err(AppError { message: "只能恢复已暂停的下载任务".to_string() });
+            return Err(AppError {
+                message: "只能恢复已暂停的下载任务".to_string(),
+            });
         }
         if task.direction != TransferDirection::Download {
-            return Err(AppError { message: "只能恢复下载任务，不支持上传续传".to_string() });
+            return Err(AppError {
+                message: "只能恢复下载任务，不支持上传续传".to_string(),
+            });
         }
 
         // 重置状态为 Pending
         let _ = mgr.resume_task(&id);
 
-        (task.remote_device, task.remote_path, task.local_path, task.file_name)
+        (
+            task.remote_device,
+            task.remote_path,
+            task.local_path,
+            task.file_name,
+        )
     };
 
     let local_path_buf = std::path::PathBuf::from(&local_path);
@@ -666,8 +736,15 @@ async fn resume_download(app: tauri::AppHandle, id: String) -> Result<(), AppErr
     let log = state.operation_log.clone();
 
     tokio::spawn(run_download_loop(
-        app, tm, log, id, remote_addr, remote_path,
-        local_path_buf, file_name, speed_limit,
+        app,
+        tm,
+        log,
+        id,
+        remote_addr,
+        remote_path,
+        local_path_buf,
+        file_name,
+        speed_limit,
     ));
 
     Ok(())
@@ -681,10 +758,7 @@ async fn get_settings(app: tauri::AppHandle) -> Result<Settings, AppError> {
 }
 
 #[tauri::command]
-async fn update_settings(
-    app: tauri::AppHandle,
-    new_settings: Settings,
-) -> Result<(), AppError> {
+async fn update_settings(app: tauri::AppHandle, new_settings: Settings) -> Result<(), AppError> {
     let state = app.state::<AppState>();
     let mut settings = state.settings.lock().await;
 
@@ -728,7 +802,8 @@ async fn update_settings(
         });
     }
     // 同步配对管理器（保留名称和昵称）
-    state.pairing
+    state
+        .pairing
         .replace_inner(PairingManager::from_settings(
             &new_settings.trusted_devices,
             &new_settings.trusted_device_names,
@@ -746,7 +821,9 @@ async fn get_trusted_devices(app: tauri::AppHandle) -> Result<Vec<String>, AppEr
 }
 
 #[tauri::command]
-async fn get_trusted_device_list(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, AppError> {
+async fn get_trusted_device_list(
+    app: tauri::AppHandle,
+) -> Result<Vec<serde_json::Value>, AppError> {
     let state = app.state::<AppState>();
     let my_id = &state.device_id;
     let devices = state.pairing.trusted_devices().await;
@@ -759,10 +836,17 @@ async fn get_trusted_device_list(app: tauri::AppHandle) -> Result<Vec<serde_json
 }
 
 #[tauri::command]
-async fn trust_device(app: tauri::AppHandle, device_id: String, device_name: Option<String>) -> Result<(), AppError> {
+async fn trust_device(
+    app: tauri::AppHandle,
+    device_id: String,
+    device_name: Option<String>,
+) -> Result<(), AppError> {
     let state = app.state::<AppState>();
     if let Some(name) = device_name {
-        state.pairing.trust_device_with_name(&device_id, &name).await;
+        state
+            .pairing
+            .trust_device_with_name(&device_id, &name)
+            .await;
     } else {
         state.pairing.trust_device(&device_id).await;
     }
@@ -910,7 +994,11 @@ async fn get_chat_messages(app: tauri::AppHandle) -> Result<Vec<server::ws::Chat
 }
 
 #[tauri::command]
-async fn send_chat_message(app: tauri::AppHandle, text: String, to_id: Option<String>) -> Result<(), AppError> {
+async fn send_chat_message(
+    app: tauri::AppHandle,
+    text: String,
+    to_id: Option<String>,
+) -> Result<(), AppError> {
     let state = app.state::<AppState>();
     let device_id = state.device_id.clone();
     let settings = state.settings.lock().await;
@@ -918,10 +1006,25 @@ async fn send_chat_message(app: tauri::AppHandle, text: String, to_id: Option<St
     drop(settings);
 
     if text.is_empty() {
-        return Err(AppError { message: "消息不能为空".to_string() });
+        return Err(AppError {
+            message: "消息不能为空".to_string(),
+        });
     }
 
-    let entry = state.chat_store.add_message(device_id, device_name, text, "text".to_string(), None, None, None, None, to_id.clone()).await;
+    let entry = state
+        .chat_store
+        .add_message(
+            device_id,
+            device_name,
+            text,
+            "text".to_string(),
+            None,
+            None,
+            None,
+            None,
+            to_id.clone(),
+        )
+        .await;
     let _ = state.ws_tx.send(WsMessage::ChatMessage {
         from_id: entry.from_id.clone(),
         from_name: entry.from_name.clone(),
@@ -939,7 +1042,11 @@ async fn send_chat_message(app: tauri::AppHandle, text: String, to_id: Option<St
 }
 
 #[tauri::command]
-async fn set_device_nickname(app: tauri::AppHandle, device_id: String, nickname: String) -> Result<(), AppError> {
+async fn set_device_nickname(
+    app: tauri::AppHandle,
+    device_id: String,
+    nickname: String,
+) -> Result<(), AppError> {
     let state = app.state::<AppState>();
     state.pairing.set_nickname(&device_id, &nickname).await;
     // 持久化到 settings
@@ -1015,7 +1122,10 @@ async fn stop_remote_control(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn test_screen_capture() -> Result<String, String> {
     use base64::Engine;
-    let frame = crate::remote::capture_screen_jpeg(crate::remote::DEFAULT_JPEG_QUALITY, crate::remote::DEFAULT_SCALE)?;
+    let frame = crate::remote::capture_screen_jpeg(
+        crate::remote::DEFAULT_JPEG_QUALITY,
+        crate::remote::DEFAULT_SCALE,
+    )?;
     Ok(base64::engine::general_purpose::STANDARD.encode(&frame.jpeg_data))
 }
 
@@ -1028,10 +1138,12 @@ async fn start_recording(app: tauri::AppHandle) -> Result<String, String> {
     drop(settings);
 
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let output_path = std::path::PathBuf::from(&download_dir)
-        .join(format!("remote_recording_{}.avi", timestamp));
+    let output_path =
+        std::path::PathBuf::from(&download_dir).join(format!("remote_recording_{}.avi", timestamp));
 
-    state.screen_recorder.start(output_path.clone())
+    state
+        .screen_recorder
+        .start(output_path.clone())
         .map_err(|e| format!("开始录制失败: {}", e))?;
 
     tracing::info!("开始屏幕录制: {:?}", output_path);
@@ -1042,7 +1154,9 @@ async fn start_recording(app: tauri::AppHandle) -> Result<String, String> {
 #[tauri::command]
 async fn stop_recording(app: tauri::AppHandle) -> Result<String, String> {
     let state = app.state::<AppState>();
-    let path = state.screen_recorder.stop()
+    let path = state
+        .screen_recorder
+        .stop()
         .map_err(|e| format!("停止录制失败: {}", e))?;
     tracing::info!("录制保存至: {:?}", path);
     Ok(path.to_string_lossy().to_string())
@@ -1080,7 +1194,11 @@ fn open_accessibility_settings() {
 }
 
 #[tauri::command]
-async fn send_chat_file(app: tauri::AppHandle, local_path: String, to_id: Option<String>) -> Result<serde_json::Value, AppError> {
+async fn send_chat_file(
+    app: tauri::AppHandle,
+    local_path: String,
+    to_id: Option<String>,
+) -> Result<serde_json::Value, AppError> {
     use rand::Rng;
     let state = app.state::<AppState>();
     let device_id = state.device_id.clone();
@@ -1090,21 +1208,29 @@ async fn send_chat_file(app: tauri::AppHandle, local_path: String, to_id: Option
 
     let source = std::path::Path::new(&local_path);
     if !source.exists() {
-        return Err(AppError { message: "文件不存在".to_string() });
+        return Err(AppError {
+            message: "文件不存在".to_string(),
+        });
     }
 
-    let file_name = source.file_name()
+    let file_name = source
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("file")
         .to_string();
-    let file_size = tokio::fs::metadata(&local_path).await
+    let file_size = tokio::fs::metadata(&local_path)
+        .await
         .map(|m| m.len())
         .unwrap_or(0);
 
     // 简单判断文件类型
-    let file_type = if file_name.ends_with(".png") || file_name.ends_with(".jpg")
-        || file_name.ends_with(".jpeg") || file_name.ends_with(".gif")
-        || file_name.ends_with(".webp") || file_name.ends_with(".bmp") {
+    let file_type = if file_name.ends_with(".png")
+        || file_name.ends_with(".jpg")
+        || file_name.ends_with(".jpeg")
+        || file_name.ends_with(".gif")
+        || file_name.ends_with(".webp")
+        || file_name.ends_with(".bmp")
+    {
         format!("image/{}", file_name.rsplit('.').next().unwrap_or("png"))
     } else {
         "application/octet-stream".to_string()
@@ -1114,26 +1240,40 @@ async fn send_chat_file(app: tauri::AppHandle, local_path: String, to_id: Option
     let share_dir = state.share_dir.read().unwrap().clone();
     let file_id: String = format!("cf{:016x}", rand::thread_rng().gen::<u64>());
     let chat_dir = share_dir.join(".chat_files").join(&file_id);
-    tokio::fs::create_dir_all(&chat_dir).await
-        .map_err(|e| AppError { message: format!("创建目录失败: {}", e) })?;
+    tokio::fs::create_dir_all(&chat_dir)
+        .await
+        .map_err(|e| AppError {
+            message: format!("创建目录失败: {}", e),
+        })?;
 
     let dest = chat_dir.join(&file_name);
-    tokio::fs::copy(&local_path, &dest).await
-        .map_err(|e| AppError { message: format!("复制文件失败: {}", e) })?;
+    tokio::fs::copy(&local_path, &dest)
+        .await
+        .map_err(|e| AppError {
+            message: format!("复制文件失败: {}", e),
+        })?;
 
     let is_image = file_type.starts_with("image/");
-    let msg_type = if is_image { "image".to_string() } else { "file".to_string() };
+    let msg_type = if is_image {
+        "image".to_string()
+    } else {
+        "file".to_string()
+    };
 
-    let entry = state.chat_store.add_message(
-        device_id, device_name,
-        format!("[{}]", file_name),
-        msg_type,
-        Some(file_name.clone()),
-        Some(file_size),
-        Some(file_id.clone()),
-        Some(file_type),
-        to_id.clone(),
-    ).await;
+    let entry = state
+        .chat_store
+        .add_message(
+            device_id,
+            device_name,
+            format!("[{}]", file_name),
+            msg_type,
+            Some(file_name.clone()),
+            Some(file_size),
+            Some(file_id.clone()),
+            Some(file_type),
+            to_id.clone(),
+        )
+        .await;
 
     let _ = state.ws_tx.send(WsMessage::ChatMessage {
         from_id: entry.from_id,
@@ -1167,18 +1307,26 @@ async fn download_chat_file(app: tauri::AppHandle, file_id: String) -> Result<St
 
     let file_dir = share_dir.join(".chat_files").join(&file_id);
     if !file_dir.exists() {
-        return Err(AppError { message: "聊天文件不存在".to_string() });
+        return Err(AppError {
+            message: "聊天文件不存在".to_string(),
+        });
     }
 
-    let mut entries = tokio::fs::read_dir(&file_dir).await
-        .map_err(|e| AppError { message: format!("读取聊天文件失败: {}", e) })?;
+    let mut entries = tokio::fs::read_dir(&file_dir).await.map_err(|e| AppError {
+        message: format!("读取聊天文件失败: {}", e),
+    })?;
 
     let source_path = match entries.next_entry().await {
         Ok(Some(entry)) => entry.path(),
-        _ => return Err(AppError { message: "聊天文件不存在".to_string() }),
+        _ => {
+            return Err(AppError {
+                message: "聊天文件不存在".to_string(),
+            })
+        }
     };
 
-    let file_name = source_path.file_name()
+    let file_name = source_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("download");
     let dest_path = download_dir.join(file_name);
@@ -1187,14 +1335,24 @@ async fn download_chat_file(app: tauri::AppHandle, file_id: String) -> Result<St
     let mut final_path = dest_path.clone();
     let mut counter = 1;
     while final_path.exists() {
-        let stem = dest_path.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
-        let ext = dest_path.extension().and_then(|s| s.to_str()).map(|s| format!(".{}", s)).unwrap_or_default();
+        let stem = dest_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("file");
+        let ext = dest_path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| format!(".{}", s))
+            .unwrap_or_default();
         final_path = download_dir.join(format!("{}({}){}", stem, counter, ext));
         counter += 1;
     }
 
-    tokio::fs::copy(&source_path, &final_path).await
-        .map_err(|e| AppError { message: format!("保存文件失败: {}", e) })?;
+    tokio::fs::copy(&source_path, &final_path)
+        .await
+        .map_err(|e| AppError {
+            message: format!("保存文件失败: {}", e),
+        })?;
 
     Ok(final_path.to_string_lossy().to_string())
 }
@@ -1202,7 +1360,9 @@ async fn download_chat_file(app: tauri::AppHandle, file_id: String) -> Result<St
 /// 用系统默认程序打开文件
 #[tauri::command]
 async fn open_file(path: String) -> Result<(), AppError> {
-    open::that(&path).map_err(|e| AppError { message: format!("打开文件失败: {}", e) })?;
+    open::that(&path).map_err(|e| AppError {
+        message: format!("打开文件失败: {}", e),
+    })?;
     Ok(())
 }
 
@@ -1214,18 +1374,29 @@ async fn get_chat_image_base64(app: tauri::AppHandle, file_id: String) -> Result
 
     let file_dir = share_dir.join(".chat_files").join(&file_id);
     if !file_dir.exists() {
-        return Err(AppError { message: "图片不存在".to_string() });
+        return Err(AppError {
+            message: "图片不存在".to_string(),
+        });
     }
 
-    let mut entries = tokio::fs::read_dir(&file_dir).await
-        .map_err(|e| AppError { message: format!("读取失败: {}", e) })?;
+    let mut entries = tokio::fs::read_dir(&file_dir).await.map_err(|e| AppError {
+        message: format!("读取失败: {}", e),
+    })?;
 
     let source_path = match entries.next_entry().await {
         Ok(Some(entry)) => entry.path(),
-        _ => return Err(AppError { message: "图片不存在".to_string() }),
+        _ => {
+            return Err(AppError {
+                message: "图片不存在".to_string(),
+            })
+        }
     };
 
-    let ext = source_path.extension().and_then(|s| s.to_str()).unwrap_or("png").to_lowercase();
+    let ext = source_path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("png")
+        .to_lowercase();
     let mime = match ext.as_str() {
         "jpg" | "jpeg" => "image/jpeg",
         "png" => "image/png",
@@ -1235,10 +1406,15 @@ async fn get_chat_image_base64(app: tauri::AppHandle, file_id: String) -> Result
         _ => "image/png",
     };
 
-    let data = tokio::fs::read(&source_path).await
-        .map_err(|e| AppError { message: format!("读取图片失败: {}", e) })?;
+    let data = tokio::fs::read(&source_path).await.map_err(|e| AppError {
+        message: format!("读取图片失败: {}", e),
+    })?;
 
-    Ok(format!("data:{};base64,{}", mime, base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &data)))
+    Ok(format!(
+        "data:{};base64,{}",
+        mime,
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &data)
+    ))
 }
 
 #[tauri::command]
@@ -1263,8 +1439,7 @@ async fn get_local_device_info(app: tauri::AppHandle) -> Result<DeviceInfo, AppE
 pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -1284,8 +1459,7 @@ pub fn run() {
                 let _ = settings.save();
                 new_id
             });
-            let discovery =
-                DiscoveryManager::new().expect("mDNS 初始化失败");
+            let discovery = DiscoveryManager::new().expect("mDNS 初始化失败");
 
             let (ws_tx, _ws_rx) = broadcast::channel::<WsMessage>(256);
 
@@ -1427,49 +1601,85 @@ pub fn run() {
                 while let Ok(msg) = rx.recv().await {
                     #[allow(clippy::collapsible_match)]
                     match &msg {
-                        WsMessage::TransferProgress { id, file_name, bytes_transferred, total_bytes, speed } => {
+                        WsMessage::TransferProgress {
+                            id,
+                            file_name,
+                            bytes_transferred,
+                            total_bytes,
+                            speed,
+                        } => {
                             if *bytes_transferred < *total_bytes {
-                                let _ = _progress_app.emit("transfer-progress", serde_json::json!({
-                                    "id": id,
-                                    "file_name": file_name,
-                                    "bytes_transferred": bytes_transferred,
-                                    "total_bytes": total_bytes,
-                                    "speed": speed,
-                                }));
+                                let _ = _progress_app.emit(
+                                    "transfer-progress",
+                                    serde_json::json!({
+                                        "id": id,
+                                        "file_name": file_name,
+                                        "bytes_transferred": bytes_transferred,
+                                        "total_bytes": total_bytes,
+                                        "speed": speed,
+                                    }),
+                                );
                             }
                         }
                         WsMessage::TransferComplete { id, file_name } => {
-                            let _ = _progress_app.emit("transfer-complete", serde_json::json!({
-                                "id": id,
-                                "file_name": file_name,
-                            }));
+                            let _ = _progress_app.emit(
+                                "transfer-complete",
+                                serde_json::json!({
+                                    "id": id,
+                                    "file_name": file_name,
+                                }),
+                            );
                         }
-                        WsMessage::TransferError { id, file_name, error } => {
-                            let _ = _progress_app.emit("transfer-error", serde_json::json!({
-                                "id": id,
-                                "file_name": file_name,
-                                "error": error,
-                            }));
+                        WsMessage::TransferError {
+                            id,
+                            file_name,
+                            error,
+                        } => {
+                            let _ = _progress_app.emit(
+                                "transfer-error",
+                                serde_json::json!({
+                                    "id": id,
+                                    "file_name": file_name,
+                                    "error": error,
+                                }),
+                            );
                         }
-                        WsMessage::ChatMessage { from_id, from_name, text, timestamp, message_type, file_name, file_size, file_id, file_type, to_id } => {
-                            let _ = _progress_app.emit("chat-message", serde_json::json!({
-                                "from_id": from_id,
-                                "from_name": from_name,
-                                "text": text,
-                                "timestamp": timestamp,
-                                "message_type": message_type,
-                                "file_name": file_name,
-                                "file_size": file_size,
-                                "file_id": file_id,
-                                "file_type": file_type,
-                                "to_id": to_id,
-                            }));
+                        WsMessage::ChatMessage {
+                            from_id,
+                            from_name,
+                            text,
+                            timestamp,
+                            message_type,
+                            file_name,
+                            file_size,
+                            file_id,
+                            file_type,
+                            to_id,
+                        } => {
+                            let _ = _progress_app.emit(
+                                "chat-message",
+                                serde_json::json!({
+                                    "from_id": from_id,
+                                    "from_name": from_name,
+                                    "text": text,
+                                    "timestamp": timestamp,
+                                    "message_type": message_type,
+                                    "file_name": file_name,
+                                    "file_size": file_size,
+                                    "file_id": file_id,
+                                    "file_type": file_type,
+                                    "to_id": to_id,
+                                }),
+                            );
                         }
                         WsMessage::DeviceStatus { device_id, online } => {
-                            let _ = _progress_app.emit("device-status", serde_json::json!({
-                                "device_id": device_id,
-                                "online": online,
-                            }));
+                            let _ = _progress_app.emit(
+                                "device-status",
+                                serde_json::json!({
+                                    "device_id": device_id,
+                                    "online": online,
+                                }),
+                            );
                         }
                         // 远程控制消息暂不处理（由专门的 Tauri 命令处理）
                         _ => {}
@@ -1502,7 +1712,17 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 // 首次创建 router（之后每次 re-bind 复用 router 即可）
                 let router = server::http::build_router(
-                    share_dir_for_http, tm, ws_tx, pairing, require_pairing, chat_messages.clone(), ws_tracker_for_build, device_id_for_http, discovered_devices.clone(), clipboard_sync_for_http, screen_recorder_for_http,
+                    share_dir_for_http,
+                    tm,
+                    ws_tx,
+                    pairing,
+                    require_pairing,
+                    chat_messages.clone(),
+                    ws_tracker_for_build,
+                    device_id_for_http,
+                    discovered_devices.clone(),
+                    clipboard_sync_for_http,
+                    screen_recorder_for_http,
                 );
 
                 let mut port_rx = port_watch_rx;
@@ -1519,7 +1739,11 @@ pub fn run() {
                     let listener = match tokio::net::TcpListener::bind(&bind_addr).await {
                         Ok(l) => l,
                         Err(e) => {
-                            tracing::error!("无法绑定端口 {} ({})，等待 5 秒后重试", current_config_port, e);
+                            tracing::error!(
+                                "无法绑定端口 {} ({})，等待 5 秒后重试",
+                                current_config_port,
+                                e
+                            );
                             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                             continue;
                         }
@@ -1626,9 +1850,7 @@ mod tests {
     fn should_retry_in_download_loop(result: &Result<(), AppError>, can_retry: bool) -> bool {
         match result {
             Ok(_) => false,
-            Err(e) if e.message == "TRANSFER_PAUSED" || e.message == "TRANSFER_CANCELLED" => {
-                false
-            }
+            Err(e) if e.message == "TRANSFER_PAUSED" || e.message == "TRANSFER_CANCELLED" => false,
             Err(_) => can_retry,
         }
     }

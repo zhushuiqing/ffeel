@@ -3,9 +3,7 @@
 //! 使用 enigo 库模拟输入事件。由于 enigo::Enigo 不是 Send，
 //! 我们使用 spawn_blocking 来执行实际输入操作。
 
-use enigo::{
-    Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings,
-};
+use enigo::{Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings};
 
 /// 输入事件类型
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -22,8 +20,8 @@ pub struct InputEvent {
 
 /// 处理输入事件（在阻塞线程中执行）
 pub fn handle_input_event(event: &InputEvent) -> Result<(), String> {
-    let mut enigo = Enigo::new(&Settings::default())
-        .map_err(|e| format!("输入控制器初始化失败: {}", e))?;
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("输入控制器初始化失败: {}", e))?;
 
     match event.event_type.as_str() {
         "mouse_move" => {

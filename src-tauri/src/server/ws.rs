@@ -1,7 +1,7 @@
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
-    response::IntoResponse,
     extract::State,
+    response::IntoResponse,
 };
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
@@ -100,8 +100,12 @@ pub enum WsMessage {
     },
 }
 
-fn default_rc_quality() -> String { "medium".to_string() }
-fn default_rc_fps() -> u32 { 15 }
+fn default_rc_quality() -> String {
+    "medium".to_string()
+}
+fn default_rc_fps() -> u32 {
+    15
+}
 
 /// 聊天消息记录（含文件消息支持）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -261,16 +265,15 @@ impl ChatStore {
 }
 
 /// WebSocket 升级处理
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
     let rx = state.ws_tx.subscribe();
     let ws_tx = state.ws_tx.clone();
     let chat_store = state.chat_store.clone();
     let ws_tracker = state.ws_tracker.clone();
     let clipboard_sync = state.clipboard_sync.clone();
-    ws.on_upgrade(move |socket| handle_ws_connection(socket, rx, ws_tx, chat_store, ws_tracker, clipboard_sync))
+    ws.on_upgrade(move |socket| {
+        handle_ws_connection(socket, rx, ws_tx, chat_store, ws_tracker, clipboard_sync)
+    })
 }
 
 async fn handle_ws_connection(
@@ -285,7 +288,9 @@ async fn handle_ws_connection(
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
     let mut registered_device_id: Option<String> = None;
     // 清理函数：断开时注销设备
-    let cleanup = |tracker: WsConnectionTracker, dev_id: Option<String>, tx: broadcast::Sender<WsMessage>| async move {
+    let cleanup = |tracker: WsConnectionTracker,
+                   dev_id: Option<String>,
+                   tx: broadcast::Sender<WsMessage>| async move {
         if let Some(id) = dev_id {
             tracker.unregister(&id).await;
             let _ = tx.send(WsMessage::DeviceStatus {

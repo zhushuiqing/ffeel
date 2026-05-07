@@ -10,10 +10,10 @@ impl CertificateManager {
         let key_path = config_dir.join("key.pem");
 
         if cert_path.exists() && key_path.exists() {
-            let cert_pem = std::fs::read_to_string(&cert_path)
-                .map_err(|e| format!("读取证书失败: {}", e))?;
-            let key_pem = std::fs::read_to_string(&key_path)
-                .map_err(|e| format!("读取密钥失败: {}", e))?;
+            let cert_pem =
+                std::fs::read_to_string(&cert_path).map_err(|e| format!("读取证书失败: {}", e))?;
+            let key_pem =
+                std::fs::read_to_string(&key_path).map_err(|e| format!("读取密钥失败: {}", e))?;
             return Ok((cert_pem, key_pem));
         }
 
@@ -22,10 +22,8 @@ impl CertificateManager {
         if let Some(parent) = cert_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| format!("创建证书目录失败: {}", e))?;
         }
-        std::fs::write(&cert_path, &cert_pem)
-            .map_err(|e| format!("写入证书文件失败: {}", e))?;
-        std::fs::write(&key_path, &key_pem)
-            .map_err(|e| format!("写入密钥文件失败: {}", e))?;
+        std::fs::write(&cert_path, &cert_pem).map_err(|e| format!("写入证书文件失败: {}", e))?;
+        std::fs::write(&key_path, &key_pem).map_err(|e| format!("写入密钥文件失败: {}", e))?;
 
         Ok((cert_pem, key_pem))
     }
@@ -43,10 +41,9 @@ impl CertificateManager {
         ];
         params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
         params.distinguished_name = rcgen::DistinguishedName::new();
-        params.distinguished_name.push(
-            rcgen::DnType::CommonName,
-            "ffeel",
-        );
+        params
+            .distinguished_name
+            .push(rcgen::DnType::CommonName, "ffeel");
         params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
 
         let cert = params
@@ -102,6 +99,9 @@ mod tests {
             .with_single_cert(certs, keys)
             .expect("应能用证书和密钥创建 TLS 配置");
 
-        assert!(!config.alpn_protocols.is_empty() || true, "TLS config created");
+        assert!(
+            !config.alpn_protocols.is_empty() || true,
+            "TLS config created"
+        );
     }
 }

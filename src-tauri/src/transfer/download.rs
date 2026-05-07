@@ -25,7 +25,11 @@ fn check_partial_file(local_path: &Path) -> (PathBuf, u64) {
             fallback
         } else {
             // 尝试原文件名 + .part
-            let part_name = format!("{}{}", local_path.file_name().unwrap_or_default().to_string_lossy(), PART_SUFFIX);
+            let part_name = format!(
+                "{}{}",
+                local_path.file_name().unwrap_or_default().to_string_lossy(),
+                PART_SUFFIX
+            );
             let parent = local_path.parent().unwrap_or(Path::new("."));
             parent.join(part_name)
         }
@@ -74,45 +78,51 @@ pub async fn download_file_from_remote(
     })?;
 
     if response.status() == reqwest::StatusCode::NOT_FOUND {
-        return Err(AppError { message: "远程文件不存在".to_string() });
+        return Err(AppError {
+            message: "远程文件不存在".to_string(),
+        });
     }
     if response.status() == reqwest::StatusCode::FORBIDDEN {
-        return Err(AppError { message: "PAIRING_REQUIRED".to_string() });
+        return Err(AppError {
+            message: "PAIRING_REQUIRED".to_string(),
+        });
     }
-    if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+    if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT
+    {
         return Err(AppError {
             message: format!("下载失败: HTTP {}", response.status()),
         });
     }
 
     if let Some(parent) = local_path.parent() {
-        tokio::fs::create_dir_all(parent).await.map_err(|e| AppError {
-            message: format!("创建目录失败: {}", e),
-        })?;
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| AppError {
+                message: format!("创建目录失败: {}", e),
+            })?;
     }
 
     // 处理 Range 响应：如果请求了 Range 但返回 200（不支持断点），从头开始下载
-    let (mut file, mut downloaded) = if existing_size > 0
-        && response.status() == reqwest::StatusCode::PARTIAL_CONTENT
-    {
-        // 续传：以追加模式打开
-        let f = tokio::fs::OpenOptions::new()
-            .append(true)
-            .open(&part_path)
-            .await
-            .map_err(|e| AppError {
-                message: format!("打开部分文件失败: {}", e),
-            })?;
-        (f, existing_size)
-    } else {
-        // 新建文件（覆盖已存在的部分文件，从头下载）
-        let f = tokio::fs::File::create(&part_path)
-            .await
-            .map_err(|e| AppError {
-                message: format!("创建文件失败: {}", e),
-            })?;
-        (f, 0)
-    };
+    let (mut file, mut downloaded) =
+        if existing_size > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT {
+            // 续传：以追加模式打开
+            let f = tokio::fs::OpenOptions::new()
+                .append(true)
+                .open(&part_path)
+                .await
+                .map_err(|e| AppError {
+                    message: format!("打开部分文件失败: {}", e),
+                })?;
+            (f, existing_size)
+        } else {
+            // 新建文件（覆盖已存在的部分文件，从头下载）
+            let f = tokio::fs::File::create(&part_path)
+                .await
+                .map_err(|e| AppError {
+                    message: format!("创建文件失败: {}", e),
+                })?;
+            (f, 0)
+        };
 
     let mut stream = response.bytes_stream();
     let start = std::time::Instant::now();
@@ -159,13 +169,17 @@ pub async fn download_file_from_remote(
             if let Some(task) = tasks.iter().find(|t| t.local_path == local_path_str) {
                 match task.status {
                     TransferStatus::Paused => {
-                        return Err(AppError { message: "TRANSFER_PAUSED".to_string() });
+                        return Err(AppError {
+                            message: "TRANSFER_PAUSED".to_string(),
+                        });
                     }
                     TransferStatus::Cancelled => {
                         // 取消下载，清理部分文件
                         drop(mgr);
                         let _ = tokio::fs::remove_file(&part_path).await;
-                        return Err(AppError { message: "TRANSFER_CANCELLED".to_string() });
+                        return Err(AppError {
+                            message: "TRANSFER_CANCELLED".to_string(),
+                        });
                     }
                     _ => {}
                 }
@@ -174,9 +188,11 @@ pub async fn download_file_from_remote(
     }
 
     // 下载完成，重命名为目标文件名
-    tokio::fs::rename(&part_path, local_path).await.map_err(|e| AppError {
-        message: format!("重命名文件失败: {}", e),
-    })?;
+    tokio::fs::rename(&part_path, local_path)
+        .await
+        .map_err(|e| AppError {
+            message: format!("重命名文件失败: {}", e),
+        })?;
 
     {
         let mut mgr = transfer_manager.lock().await;

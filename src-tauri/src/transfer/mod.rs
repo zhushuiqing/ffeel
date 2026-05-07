@@ -1,4 +1,4 @@
-pub mod queue;
 pub mod download;
-pub mod upload;
+pub mod queue;
 pub mod rate_limiter;
+pub mod upload;
